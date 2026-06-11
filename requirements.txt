@@ -1,0 +1,7 @@
+# inst2ord runtime dependencies.
+# Install into a venv:  python3 -m venv .venv && . .venv/bin/activate
+#                       pip install -r requirements.txt
+ord-schema>=0.6.7      # Open Reaction Database schema, validation, message helpers
+requests>=2.31         # PubChem REST lookups (only used with --resolve)
+# rdkit is pulled in transitively by ord-schema; pinned here for clarity.
+rdkit>=2024.3
