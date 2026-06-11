@@ -24,7 +24,7 @@ import sys
 from inst2ord import export
 from inst2ord.adapters import available_adapters, detect_adapter, get_adapter
 from inst2ord.build_ord import build_dataset, build_reaction
-from inst2ord.madmp import parse_madmp
+from inst2ord.madmp import parse_madmp, validate_madmp
 from inst2ord.resolve import CompoundResolver
 from inst2ord.validate import validate_dataset, validate_reaction
 
@@ -69,8 +69,11 @@ def main(argv: list[str] | None = None) -> int:
         sys.stdout.write("\n")
         return 0
 
-    madmp = parse_madmp(args.madmp) if args.madmp else None
-    if madmp:
+    madmp = None
+    if args.madmp:
+        if _check_madmp_schema(args.madmp, args.strict_madmp) is False:
+            return 2
+        madmp = parse_madmp(args.madmp)
         print(f"maDMP: {madmp.title!r} ({madmp.source_path})")
 
     resolver = CompoundResolver(
@@ -106,6 +109,38 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"\nWrote {args.format} output to {args.out}/")
     return 0 if overall_ok else 1
+
+
+def _check_madmp_schema(path: str, strict: bool) -> bool:
+    """Validate the maDMP against the RDA schema.
+
+    Returns False only when validation fails and ``strict`` is set (the
+    caller should then abort). Schema issues are warnings by default; if
+    jsonschema is unavailable the check is skipped.
+    """
+    try:
+        issues = validate_madmp(path)
+    except ModuleNotFoundError:
+        print(
+            "maDMP schema check skipped (pip install jsonschema).",
+            file=sys.stderr,
+        )
+        return True
+    if not issues:
+        return True
+    print(f"maDMP schema: {len(issues)} issue(s):", file=sys.stderr)
+    for message in issues[:10]:
+        print(f"  - {message}", file=sys.stderr)
+    if len(issues) > 10:
+        print(f"  ... and {len(issues) - 10} more", file=sys.stderr)
+    if strict:
+        print("Aborting due to --strict-madmp.", file=sys.stderr)
+        return False
+    print(
+        "Continuing despite schema issues (use --strict-madmp to abort).",
+        file=sys.stderr,
+    )
+    return True
 
 
 def _emit(intent, madmp, fmt: str, path: str):
@@ -147,6 +182,12 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         help="instrument adapter name (default: auto-detect)",
     )
     parser.add_argument("--madmp", help="path to a maDMP JSON file")
+    parser.add_argument(
+        "--strict-madmp",
+        action="store_true",
+        help="abort if the maDMP fails RDA 1.2 schema validation "
+        "(default: warn and continue)",
+    )
     parser.add_argument(
         "--out", default="out", help="output directory (default: out)"
     )

@@ -85,7 +85,7 @@ def build_reaction(
         reaction_input.components.append(_build_compound(comp))
 
     _build_setup(reaction.setup, intent)
-    reaction.notes.procedure_details = _procedure_details(intent)
+    reaction.notes.procedure_details = _procedure_details(intent, madmp)
     _build_provenance(reaction.provenance, intent, madmp)
     return reaction
 
@@ -190,7 +190,7 @@ def _platform_label(instrument: str) -> str:
 
 # --- notes (free-text dump of everything not structurally mapped) ----------
 
-def _procedure_details(intent: ReactionIntent) -> str:
+def _procedure_details(intent: ReactionIntent, madmp: MaDmp | None) -> str:
     lines = [
         f"Imported from {_platform_label(intent.instrument)} by inst2ord.",
         f"Run: {intent.run_id}",
@@ -212,6 +212,13 @@ def _procedure_details(intent: ReactionIntent) -> str:
         for option in selected:
             label = option.description or option.name
             lines.append(f"  - [{option.category}] {label}: {option.value}")
+    if madmp and madmp.contributors:
+        # ORD provenance has no contributor list, so keep the full roster
+        # here -- this is the only place templates can retain it.
+        lines.append("")
+        lines.append("Contributors (from maDMP):")
+        for label in _contributor_labels(madmp):
+            lines.append(f"  - {label}")
     return "\n".join(lines)
 
 
@@ -220,34 +227,72 @@ def _procedure_details(intent: ReactionIntent) -> str:
 def _build_provenance(
     provenance, intent: ReactionIntent, madmp: MaDmp | None
 ) -> None:
-    experimenter = _experimenter(intent, madmp)
+    experimenter_src, creator_src = _provenance_sources(madmp)
+    experimenter = _to_ord_person(experimenter_src) or _operator_person(intent)
     if experimenter is not None:
         provenance.experimenter.CopyFrom(experimenter)
     if madmp and madmp.dmp_id and (madmp.dmp_id_type or "").lower() == "doi":
         provenance.doi = madmp.dmp_id
     created = (madmp.created if madmp else None) or _now_iso()
     provenance.record_created.time.value = created
-    if experimenter is not None:
-        provenance.record_created.person.CopyFrom(experimenter)
+    creator = _to_ord_person(creator_src) or experimenter
+    if creator is not None:
+        provenance.record_created.person.CopyFrom(creator)
     provenance.record_created.details = (
         f"Converted from {_platform_label(intent.instrument)} by inst2ord"
     )
 
 
-def _experimenter(
-    intent: ReactionIntent, madmp: MaDmp | None
-) -> reaction_pb2.Person | None:
-    source = _primary_person(madmp)
-    if source is not None:
-        person = reaction_pb2.Person()
-        if source.name:
-            person.name = source.name
-        if source.email:
-            person.email = source.email
-        if source.orcid:
-            person.orcid = source.orcid
-        if person.name or person.email or person.orcid:
-            return person
+# maDMP roles that suggest the person who curates/creates the data record.
+_DATA_STEWARD_ROLES = {
+    "contactperson", "datamanager", "datacurator", "datasteward",
+}
+
+
+def _provenance_sources(madmp: MaDmp | None):
+    """Pick (experimenter, record_creator) maDMP people; may be the same.
+
+    ORD provenance only has a single ``experimenter`` plus the
+    ``record_created`` person, so at most two distinct maDMP people are
+    mapped: the contact (or first contributor) as experimenter, and a
+    data-steward contributor as the record creator.  The rest are listed in
+    the notes / dataset description.
+    """
+    if not madmp:
+        return None, None
+    contacts = [madmp.contact] if madmp.contact else []
+    pool = contacts + list(madmp.contributors)
+    if not pool:
+        return None, None
+    experimenter = madmp.contact or pool[0]
+    creator = None
+    for contributor in madmp.contributors:
+        if contributor is experimenter:
+            continue
+        roles = {role.lower() for role in contributor.roles}
+        if roles & _DATA_STEWARD_ROLES:
+            creator = contributor
+            break
+    return experimenter, creator or experimenter
+
+
+def _to_ord_person(source) -> reaction_pb2.Person | None:
+    """Convert a maDMP :class:`Person` to an ORD Person, or None if empty."""
+    if source is None:
+        return None
+    person = reaction_pb2.Person()
+    if source.name:
+        person.name = source.name
+    if source.email:
+        person.email = source.email
+    if source.orcid:
+        person.orcid = source.orcid
+    if person.name or person.email or person.orcid:
+        return person
+    return None
+
+
+def _operator_person(intent: ReactionIntent) -> reaction_pb2.Person | None:
     if intent.provenance.operator_emails:
         person = reaction_pb2.Person()
         person.email = intent.provenance.operator_emails[0]
@@ -255,20 +300,20 @@ def _experimenter(
     return None
 
 
-def _primary_person(madmp: MaDmp | None):
-    """Pick the best available person: contact, else a contributor.
-
-    maDMP coverage varies -- some have only a contact, some only
-    contributors.  Among contributors a 'ContactPerson' is preferred.
-    """
-    if not madmp:
-        return None
-    if madmp.contact:
-        return madmp.contact
+def _contributor_labels(madmp: MaDmp) -> list[str]:
+    """Readable 'Name (Role; ORCID ...)' labels for each named contributor."""
+    labels = []
     for contributor in madmp.contributors:
-        if any("contact" in role.lower() for role in contributor.roles):
-            return contributor
-    return madmp.contributors[0] if madmp.contributors else None
+        if not contributor.name:
+            continue
+        bits = []
+        if contributor.roles:
+            bits.append("/".join(contributor.roles))
+        if contributor.orcid:
+            bits.append(f"ORCID {contributor.orcid}")
+        suffix = f" ({'; '.join(bits)})" if bits else ""
+        labels.append(f"{contributor.name}{suffix}")
+    return labels
 
 
 # --- dataset metadata ------------------------------------------------------
@@ -300,9 +345,9 @@ def _dataset_description(madmp: MaDmp | None) -> str:
                 grant = f" (grant {fund.grant_id})" if fund.grant_id else ""
                 if fund.funder_name:
                     lines.append(f"Funding: {fund.funder_name}{grant}")
-        names = ", ".join(c.name for c in madmp.contributors if c.name)
-        if names:
-            lines.append(f"Contributors: {names}")
+        labels = _contributor_labels(madmp)
+        if labels:
+            lines.append(f"Contributors: {', '.join(labels)}")
         if madmp.dmp_id:
             lines.append(f"DMP: {madmp.dmp_id} ({madmp.dmp_id_type})")
     lines.append(_DEFAULT_DESCRIPTION)

@@ -36,7 +36,7 @@ blank to be completed in the editor.
 | `inst2ord/models.py` | Neutral, instrument-agnostic intermediate (`ReactionIntent`) + maDMP model |
 | `inst2ord/adapters/` | One adapter per instrument; `base.py` is the contract, `__init__.py` the registry |
 | `inst2ord/adapters/symyx_automation_studio.py` | First instrument: Symyx / Unchained Labs Automation Studio |
-| `inst2ord/madmp.py` | maDMP (RDA-DMP-Common 1.2) JSON → `MaDmp` |
+| `inst2ord/madmp.py` | maDMP (RDA-DMP-Common 1.2) JSON → `MaDmp`, + schema validation against the bundled `schemas/maDMP-schema-1.2.json` |
 | `inst2ord/resolve.py` | Name → InChI/InChIKey via curation table + cached PubChem (+ RDKit) |
 | `inst2ord/build_ord.py` | `ReactionIntent` (+ `MaDmp`) → ORD `Reaction`/`Dataset` (the only module touching ORD protobufs) |
 | `inst2ord/validate.py` | Wrapper over `ord_schema.validations` |
@@ -91,22 +91,67 @@ python -m inst2ord.cli examples/xmls --out out --format binpb --combined
 python -m inst2ord.cli examples/xmls --dry-run
 ```
 
-### Importing into the web app
+## Template vs Dataset export
 
-The app has two import paths, and inst2ord can target either:
+The web app has **two** import paths that take **different, non-interchangeable**
+formats. inst2ord can target either (`--format`):
 
-- **Templates ▸ Import from JSON** (default, `--format template`) — select
-  `out/Exp###.json` and type a template name in the dialog. The file is
-  `{"binpb": <base64 Reaction>, "variables": []}` (a single `Reaction`;
-  `variables` is the enumeration-placeholder array).
-- **Create Dataset from File** (`--format dataset|binpb|txtpb`) — select
-  `out/Exp###.json` / `.binpb` / `.txtpb`, a one-reaction `Dataset`. This
-  path also keeps the maDMP Dataset-level metadata; `--combined` writes
-  `out/combined.<ext>` with all runs.
+| | **Template** (`--format template`, default) | **Dataset** (`--format dataset` / `binpb` / `txtpb`) |
+| --- | --- | --- |
+| ORD message | a single `Reaction` | a `Dataset` (one reaction per run) |
+| File | `{"binpb": <base64 Reaction>, "variables": []}` | `Dataset` as `.json` / `.binpb` / `.txtpb` |
+| Import via | **Templates ▸ Import from JSON** (you type the name in the dialog) | **Create Dataset from File** |
+| `--combined` | n/a (templates are single reactions) | writes `out/combined.<ext>` with all runs |
 
-(The two formats are **not** interchangeable: the template importer reads
-`{binpb, variables}` for a `Reaction`; the dataset importer parses the file
-as a `Dataset`.)
+The importers are not interchangeable: the template importer reads
+`{binpb, variables}` (and requires `variables` to be a JSON **array**); the
+dataset importer parses the whole file as a `Dataset`. Feeding one to the
+other fails.
+
+### What information each carries
+
+Both formats contain the same per-reaction content built from the
+instrument files + maDMP:
+
+- **Reaction inputs** — one component per loaded chemical, with a `NAME`
+  identifier and (after `--resolve`) `INCHI`/`INCHI_KEY`/`SMILES`; amounts
+  recovered from the name where present.
+- **Setup** — vessel type/details/position, `is_automated`, automation
+  platform.
+- **Provenance** — `experimenter` and `record_created` (person + time +
+  DOI) from the maDMP (see below).
+- **Notes** — a free-text dump of labware, run/setup options, source files,
+  and the full maDMP contributor roster (roles + ORCID).
+
+The **Dataset** format additionally carries **Dataset-level maDMP
+metadata** that a single-reaction template has nowhere to put: `Dataset.name`
+(maDMP title) and `Dataset.description` (maDMP description, project, funding,
+contributor list, DMP id). **Choose `--format dataset` if you need that
+metadata preserved at import; choose the default template to drop a reaction
+straight into the editor's template library.**
+
+## maDMP usage
+
+When `--madmp` is given, the following attributes are mapped (everything
+else, including the `dataset[]`/distribution/license block, is ignored):
+
+- `contact` (or, if absent, the first contributor) → `provenance.experimenter`
+  (name / email / orcid).
+- a contributor with a data-steward role (`ContactPerson`, `DataManager`,
+  `DataCurator`) → `provenance.record_created.person` — so up to **two**
+  distinct people are represented (ORD provenance has no contributor list).
+- `dmp_id` (when `type == "doi"`) → `provenance.doi`; `created` →
+  `record_created.time`.
+- `title` → `Dataset.name`; `description` + `project` + `funding` +
+  contributor names → `Dataset.description` (Dataset formats only).
+- the full contributor roster (roles + ORCID) is preserved in the reaction
+  notes regardless of format.
+
+The maDMP is validated against the bundled **RDA-DMP-Common 1.2 JSON
+schema** before use: issues are printed as warnings and processing
+continues, unless `--strict-madmp` is passed, which aborts on any schema
+violation. (Validation needs the `jsonschema` package; if it is missing the
+check is skipped.)
 
 ## Compound resolution & curation
 

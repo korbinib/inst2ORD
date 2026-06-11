@@ -3,5 +3,6 @@
 #                       pip install -r requirements.txt
 ord-schema>=0.6.7      # Open Reaction Database schema, validation, message helpers
 requests>=2.31         # PubChem REST lookups (only used with --resolve)
+jsonschema>=4.0        # optional maDMP JSON-schema validation (--strict-madmp)
 # rdkit is pulled in transitively by ord-schema; pinned here for clarity.
 rdkit>=2024.3

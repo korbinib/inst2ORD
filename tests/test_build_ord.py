@@ -88,6 +88,26 @@ def test_experimenter_prefers_contact_and_sets_doi():
     assert rxn.provenance.doi == "10.0/abc"
 
 
+def test_maps_two_distinct_people_into_provenance():
+    madmp = MaDmp(
+        contact=Person(name="Contact", email="c@x.org"),
+        contributors=[
+            Person(name="Steward", email="s@x.org", roles=["DataManager"]),
+        ],
+    )
+    rxn = build_reaction(_intent(), madmp)
+    assert rxn.provenance.experimenter.name == "Contact"
+    assert rxn.provenance.record_created.person.name == "Steward"
+
+
+def test_contributor_roster_kept_in_notes():
+    bob = Person(name="Bob", roles=["DataCurator"], orcid="0000-1")
+    madmp = MaDmp(contributors=[bob])
+    notes = build_reaction(_intent(), madmp).notes.procedure_details
+    assert "Contributors (from maDMP):" in notes
+    assert "Bob (DataCurator; ORCID 0000-1)" in notes
+
+
 def test_experimenter_falls_back_to_contributor_then_operator():
     madmp = MaDmp(contributors=[Person(name="Bob", email="bob@x.org",
                                        roles=["DataManager"])])

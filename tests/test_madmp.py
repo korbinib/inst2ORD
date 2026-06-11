@@ -2,7 +2,7 @@
 
 import json
 
-from inst2ord.madmp import parse_madmp
+from inst2ord.madmp import parse_madmp, validate_madmp
 
 
 def _write(tmp_path, doc):
@@ -47,6 +47,18 @@ def test_null_dmp_wrapper(tmp_path):
     madmp = parse_madmp(_write(tmp_path, {"dmp": None}))
     assert madmp.title is None
     assert madmp.contributors == []
+
+
+def test_schema_validation_accepts_example(madmp_example):
+    assert validate_madmp(madmp_example) == []
+
+
+def test_schema_validation_reports_violations(tmp_path):
+    # 'created' should be a date-time string and dmp has required fields.
+    path = tmp_path / "bad.json"
+    path.write_text(json.dumps({"dmp": {"created": 12345}}), encoding="utf-8")
+    issues = validate_madmp(str(path))
+    assert issues  # non-empty list of human-readable messages
 
 
 def test_junk_entries_are_skipped(tmp_path):

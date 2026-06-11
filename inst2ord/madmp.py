@@ -9,8 +9,37 @@ represent are extracted; the rest is ignored.
 from __future__ import annotations
 
 import json
+import os
 
 from inst2ord.models import Funding, MaDmp, MaDmpProject, Person
+
+# Bundled RDA-DMP-Common 1.2 JSON schema (public domain / Unlicense).
+SCHEMA_PATH = os.path.join(
+    os.path.dirname(__file__), "schemas", "maDMP-schema-1.2.json"
+)
+
+
+def validate_madmp(path: str) -> list[str]:
+    """Validate a maDMP file against the RDA 1.2 JSON schema.
+
+    Returns a (possibly empty) list of human-readable violation messages;
+    an empty list means the document is schema-valid.  Requires the
+    ``jsonschema`` package -- ``ModuleNotFoundError`` propagates so the
+    caller can decide whether to skip the check.
+    """
+    from jsonschema.validators import validator_for
+
+    with open(SCHEMA_PATH, encoding="utf-8") as handle:
+        schema = json.load(handle)
+    with open(path, encoding="utf-8") as handle:
+        document = json.load(handle)
+    validator = validator_for(schema)(schema)
+    messages = []
+    for error in sorted(validator.iter_errors(document),
+                        key=lambda e: list(e.path)):
+        location = "/".join(str(p) for p in error.path) or "(root)"
+        messages.append(f"{location}: {error.message}")
+    return messages
 
 
 def parse_madmp(path: str) -> MaDmp:
