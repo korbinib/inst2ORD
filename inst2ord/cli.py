@@ -1,4 +1,8 @@
-"""Command-line entry point: instrument files -> ORD template files.
+"""Command-line entry point: instrument files -> ORD files.
+
+By default it writes one **template** JSON per run for the ORD web app
+(``app.open-reaction-database.org``); ``--format pb``/``pbtxt`` instead write
+a protobuf ``Dataset`` (binary/text).
 
 Example
 -------
@@ -16,23 +20,39 @@ import json
 import os
 import sys
 
-from ord_schema import message_helpers
-
+from inst2ord import export
 from inst2ord.adapters import available_adapters, detect_adapter, get_adapter
-from inst2ord.build_ord import build_dataset
+from inst2ord.build_ord import build_dataset, build_reaction
 from inst2ord.madmp import parse_madmp
 from inst2ord.resolve import CompoundResolver
-from inst2ord.validate import validate_dataset
+from inst2ord.validate import validate_dataset, validate_reaction
+
+# Output format -> filename extension. "template" is the ord-app JSON
+# template (one Reaction); the rest are protobuf Datasets.
+_EXTENSIONS = {
+    "template": "json",
+    "pb": "pb.gz",
+    "pbtxt": "pbtxt",
+}
+_DATASET_FORMATS = ("pb", "pbtxt")
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
 
-    adapter = (
-        get_adapter(args.instrument)
-        if args.instrument
-        else detect_adapter(args.input_dir)
-    )
+    if not os.path.isdir(args.input_dir):
+        print(f"Not a directory: {args.input_dir!r}", file=sys.stderr)
+        return 2
+
+    try:
+        adapter = (
+            get_adapter(args.instrument)
+            if args.instrument
+            else detect_adapter(args.input_dir)
+        )
+    except KeyError as exc:
+        print(exc.args[0] if exc.args else str(exc), file=sys.stderr)
+        return 2
     if adapter is None:
         known = ", ".join(a.name for a in available_adapters())
         print(
@@ -71,15 +91,15 @@ def main(argv: list[str] | None = None) -> int:
     overall_ok = True
     for intent in intents:
         resolver.resolve_all(intent.inputs)
-        dataset = build_dataset([intent], madmp)
-        _write_outputs(dataset, args.out, intent.run_id)
-        report = validate_dataset(dataset, label=intent.run_id)
-        overall_ok &= _print_report(report)
+        overall_ok &= _print_report(_emit(intent, madmp, args))
 
-    if args.combined and intents:
+    if args.combined and args.format in _DATASET_FORMATS and intents:
         combined = build_dataset(intents, madmp)
-        _write_outputs(combined, args.out, "combined")
+        path = os.path.join(args.out, f"combined.{_EXTENSIONS[args.format]}")
+        export.write_message(combined, path)
         _print_report(validate_dataset(combined, label="combined"))
+    elif args.combined:
+        print("\nNote: --combined applies to protobuf formats only; ignored.")
 
     unresolved_path = os.path.join(args.out, "unresolved.csv")
     resolver.write_unresolved(unresolved_path)
@@ -89,14 +109,21 @@ def main(argv: list[str] | None = None) -> int:
             f"{unresolved_path}"
         )
 
-    print(f"\nWrote ORD templates to {args.out}/")
+    print(f"\nWrote {args.format} output to {args.out}/")
     return 0 if overall_ok else 1
 
 
-def _write_outputs(dataset, out_dir: str, stem: str) -> None:
-    base = os.path.join(out_dir, stem)
-    message_helpers.write_message(dataset, f"{base}.pbtxt")
-    message_helpers.write_message(dataset, f"{base}.pb.gz")
+def _emit(intent, madmp, args):
+    """Build and write one run in the requested format; return its report."""
+    filename = f"{intent.run_id}.{_EXTENSIONS[args.format]}"
+    path = os.path.join(args.out, filename)
+    if args.format == "template":
+        reaction = build_reaction(intent, madmp)
+        export.write_template(reaction, intent.run_id, path)
+        return validate_reaction(reaction, intent.run_id)
+    dataset = build_dataset([intent], madmp)
+    export.write_message(dataset, path)
+    return validate_dataset(dataset, label=intent.run_id)
 
 
 def _print_report(report) -> bool:
@@ -131,6 +158,13 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         "--out", default="out", help="output directory (default: out)"
     )
     parser.add_argument(
+        "--format",
+        choices=["template", "pb", "pbtxt"],
+        default="template",
+        help="output format: 'template' = ORD web-app JSON template "
+        "(default); 'pb'/'pbtxt' = protobuf Dataset (binary/text)",
+    )
+    parser.add_argument(
         "--resolve",
         action="store_true",
         help="resolve names via PubChem (requires network)",
@@ -148,7 +182,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--combined",
         action="store_true",
-        help="also write one combined dataset of all runs",
+        help="also write one combined Dataset of all runs (pb/pbtxt only)",
     )
     parser.add_argument(
         "--dry-run",
