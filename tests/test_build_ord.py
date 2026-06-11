@@ -100,6 +100,30 @@ def test_maps_two_distinct_people_into_provenance():
     assert rxn.provenance.record_created.person.name == "Steward"
 
 
+def test_experimenter_picked_by_datacite_role():
+    # A Researcher/Producer/... contributor becomes the experimenter, even
+    # when a contact is present; a record-creator role becomes the creator.
+    madmp = MaDmp(
+        contact=Person(name="Contact", email="c@x.org"),
+        contributors=[
+            Person(name="Rex", email="rex@x.org", roles=["Researcher"]),
+            Person(name="Dana", email="dana@x.org", roles=["DataManager"]),
+        ],
+    )
+    rxn = build_reaction(_intent(), madmp)
+    assert rxn.provenance.experimenter.name == "Rex"
+    assert rxn.provenance.record_created.person.name == "Dana"
+
+
+def test_record_creator_prefers_datamanager():
+    madmp = MaDmp(contributors=[
+        Person(name="Cassie", email="c@x.org", roles=["ContactPerson"]),
+        Person(name="Dana", email="d@x.org", roles=["DataManager"]),
+    ])
+    rxn = build_reaction(_intent(), madmp)
+    assert rxn.provenance.record_created.person.name == "Dana"
+
+
 def test_contributor_roster_kept_in_notes():
     bob = Person(name="Bob", roles=["DataCurator"], orcid="0000-1")
     madmp = MaDmp(contributors=[bob])

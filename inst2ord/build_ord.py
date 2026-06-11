@@ -243,37 +243,61 @@ def _build_provenance(
     )
 
 
-# maDMP roles that suggest the person who curates/creates the data record.
-_DATA_STEWARD_ROLES = {
-    "contactperson", "datamanager", "datacurator", "datasteward",
+# DataCite contributor roles -> ORD provenance slot.
+# A person who handled the science becomes the experimenter:
+_EXPERIMENTER_ROLES = {
+    "datacollector", "projectmember", "producer", "researcher",
 }
+# A person who manages/owns the record becomes record_created.person;
+# ordered by preference (DataManager wins when several roles match):
+_RECORD_CREATOR_ROLES = (
+    "datamanager", "contactperson", "projectmanager",
+    "projectleader", "workpackageleader", "datacurator",
+    "datasteward",
+)
 
 
 def _provenance_sources(madmp: MaDmp | None):
     """Pick (experimenter, record_creator) maDMP people; may be the same.
 
-    ORD provenance only has a single ``experimenter`` plus the
-    ``record_created`` person, so at most two distinct maDMP people are
-    mapped: the contact (or first contributor) as experimenter, and a
-    data-steward contributor as the record creator.  The rest are listed in
-    the notes / dataset description.
+    ORD provenance has only one ``experimenter`` and the ``record_created``
+    person, so at most two distinct maDMP people are mapped, by DataCite
+    contributor role:
+
+    * experimenter: a DataCollector/ProjectMember/Producer/Researcher,
+      else the DMP contact, else the first contributor.
+    * record creator: a DataManager (preferred) / ContactPerson /
+      ProjectManager / ProjectLeader / WorkPackageLeader, else the contact,
+      else the experimenter.
+
+    The full roster is also kept in the notes / dataset description.
     """
     if not madmp:
         return None, None
-    contacts = [madmp.contact] if madmp.contact else []
-    pool = contacts + list(madmp.contributors)
-    if not pool:
-        return None, None
-    experimenter = madmp.contact or pool[0]
-    creator = None
-    for contributor in madmp.contributors:
-        if contributor is experimenter:
-            continue
-        roles = {role.lower() for role in contributor.roles}
-        if roles & _DATA_STEWARD_ROLES:
-            creator = contributor
-            break
-    return experimenter, creator or experimenter
+    contributors = list(madmp.contributors)
+    experimenter = (
+        _first_with_roles(contributors, _EXPERIMENTER_ROLES)
+        or madmp.contact
+        or (contributors[0] if contributors else None)
+    )
+    creator = _record_creator(contributors) or madmp.contact or experimenter
+    return experimenter, creator
+
+
+def _first_with_roles(contributors, roles: set[str]):
+    for contributor in contributors:
+        if {role.lower() for role in contributor.roles} & roles:
+            return contributor
+    return None
+
+
+def _record_creator(contributors):
+    """First contributor matching a record-creator role, DataManager first."""
+    for wanted in _RECORD_CREATOR_ROLES:
+        match = _first_with_roles(contributors, {wanted})
+        if match is not None:
+            return match
+    return None
 
 
 def _to_ord_person(source) -> reaction_pb2.Person | None:

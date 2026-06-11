@@ -135,11 +135,14 @@ straight into the editor's template library.**
 When `--madmp` is given, the following attributes are mapped (everything
 else, including the `dataset[]`/distribution/license block, is ignored):
 
-- `contact` (or, if absent, the first contributor) → `provenance.experimenter`
-  (name / email / orcid).
-- a contributor with a data-steward role (`ContactPerson`, `DataManager`,
-  `DataCurator`) → `provenance.record_created.person` — so up to **two**
-  distinct people are represented (ORD provenance has no contributor list).
+- `provenance.experimenter` ← a contributor with a DataCite **experimenter**
+  role (`DataCollector`, `ProjectMember`, `Producer`, `Researcher`); else the
+  `contact`; else the first contributor.
+- `provenance.record_created.person` ← a contributor with a **record-creator**
+  role (`DataManager` preferred, then `ContactPerson`, `DataCurator`, `DataSteward`, `ProjectManager`,
+  `ProjectLeader`, `WorkPackageLeader`); else the `contact`; else the
+  experimenter. So up to **two** distinct people are represented (ORD
+  provenance has no contributor list).
 - `dmp_id` (when `type == "doi"`) → `provenance.doi`; `created` →
   `record_created.time`.
 - `title` → `Dataset.name`; `description` + `project` + `funding` +
