@@ -1,17 +1,18 @@
-"""Serialise built ORD messages to importable files.
+"""Serialise built ORD messages to web-app-importable files.
 
-Two output families are supported (selected by the CLI ``--format``):
+The ORD web app (``app.open-reaction-database.org``) has two import paths,
+with different formats:
 
-* **template** (default) -- a JSON file for the ORD web app
-  (``app.open-reaction-database.org``, the ``ord-app`` Contribution Editor),
-  which stores a template as a *single Reaction*.  Its create payload is
-  ``{"name": ..., "binpb": <base64 Reaction protobuf>, "variables": {...}}``
-  (see ord-app ``TemplateCreateModel``).  :func:`write_template` emits
-  exactly that, so the file can be imported as a template.
-* **protobuf** -- a ``Dataset`` written as binary ``.pb(.gz)`` or text
-  ``.pbtxt`` via :func:`write_message` (delegates to ``ord_schema``); this is
-  the dataset-level interchange/archival format and retains maDMP
-  Dataset-level metadata that a single-reaction template cannot.
+* **Templates ▸ Import from JSON** -- a JSON file
+  ``{"binpb": <base64 Reaction protobuf>, "variables": []}``.  ``binpb`` is a
+  single ``Reaction``; ``variables`` must be a JSON *array* of enumeration
+  placeholders (empty when there are none); the template name is entered in
+  the import dialog, not the file.  This matches the app's own template JSON
+  export (ord-app ``importFromFile`` / ``downloadTemplateInJSON``).
+  :func:`write_template` emits this.
+* **Create Dataset from File** -- a ``Dataset`` message as ``.json`` /
+  ``.binpb`` / ``.txtpb`` (ord-app ``pb_utils.load_message``).
+  :func:`write_dataset` emits this.
 """
 
 from __future__ import annotations
@@ -20,38 +21,33 @@ import base64
 import json
 
 from ord_schema import message_helpers
-from ord_schema.proto import reaction_pb2
+from ord_schema.proto import dataset_pb2, reaction_pb2
+
+# CLI --format -> file extension.
+FORMAT_EXTENSIONS = {
+    "template": "json",   # Templates > Import from JSON (a single Reaction)
+    "dataset": "json",    # Create Dataset from File (a Dataset, JSON)
+    "binpb": "binpb",     # Create Dataset from File (a Dataset, binary)
+    "txtpb": "txtpb",     # Create Dataset from File (a Dataset, text)
+}
+# Formats that produce a Dataset (the rest produce a single-Reaction template).
+DATASET_FORMATS = ("dataset", "binpb", "txtpb")
 
 
-def template_payload(
-    reaction: reaction_pb2.Reaction,
-    name: str,
-    variables: dict | None = None,
-) -> dict:
-    """Return an ord-app template-create payload for one reaction.
+def write_template(reaction: reaction_pb2.Reaction, path: str) -> None:
+    """Write a Templates ▸ Import from JSON file for one reaction.
 
-    ``variables`` are enumeration placeholders (``$name$``); inst2ord does
-    not generate any, so it defaults to ``{}``.
+    Shape: ``{"binpb": <base64 Reaction>, "variables": []}``.
     """
     serialized = reaction.SerializeToString()
-    return {
-        "name": name,
+    payload = {
         "binpb": base64.b64encode(serialized).decode("ascii"),
-        "variables": variables if variables is not None else {},
+        "variables": [],
     }
-
-
-def write_template(
-    reaction: reaction_pb2.Reaction, name: str, path: str
-) -> None:
-    """Write an ord-app template JSON file for ``reaction``."""
     with open(path, "w", encoding="utf-8") as handle:
-        json.dump(template_payload(reaction, name), handle, indent=2)
+        json.dump(payload, handle, indent=2)
 
 
-def write_message(message, path: str) -> None:
-    """Write a proto message as ``.pb(.gz)``/``.pbtxt``/``.json``.
-
-    Delegates to ``ord_schema`` so the format follows the file extension.
-    """
-    message_helpers.write_message(message, path)
+def write_dataset(dataset: dataset_pb2.Dataset, path: str) -> None:
+    """Write ``dataset`` to ``path``; the extension selects the format."""
+    message_helpers.write_message(dataset, path)

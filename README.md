@@ -18,8 +18,9 @@ maDMP JSON ─────▶ parse_madmp ─▶ MaDmp ────────�
   PubChem, RDKit). It does NOT read the maDMP. The maDMP is an independent
   metadata stream that build_ord uses for Dataset fields + provenance.
 
-export writes a per-run JSON template by default (for the ORD web app), or a
-protobuf Dataset with --format pb/pbtxt.
+export writes a per-run JSON template by default (Templates > Import from
+JSON), or a Dataset (--format dataset/binpb/txtpb) for Create Dataset from
+File.
 ```
 
 The platform XML describes *what is loaded and how the machine is set up*,
@@ -82,24 +83,30 @@ python -m inst2ord.cli examples/xmls \
 python -m inst2ord.cli examples/xmls --madmp examples/madmp/ex9-dmp-long.json \
     --out out --resolve
 
-# Protobuf Dataset instead (binary .pb.gz or text .pbtxt)
-python -m inst2ord.cli examples/xmls --out out --format pb     # or pbtxt
-python -m inst2ord.cli examples/xmls --out out --format pb --combined
+# Import as a Dataset instead (Create Dataset from File)
+python -m inst2ord.cli examples/xmls --out out --format dataset  # or binpb/txtpb
+python -m inst2ord.cli examples/xmls --out out --format binpb --combined
 
 # Inspect parsing only (neutral intermediate as JSON; no ORD, no network)
 python -m inst2ord.cli examples/xmls --dry-run
 ```
 
-### Output formats (`--format`)
+### Importing into the web app
 
-- **`template`** (default) — `out/Exp###.json`, one per run, in the ORD web
-  app's template shape `{"name", "binpb" (base64 Reaction protobuf),
-  "variables"}`. Import these at
-  [app.open-reaction-database.org](https://app.open-reaction-database.org/)
-  as templates. A template is a single `Reaction`.
-- **`pb`** — `out/Exp###.pb.gz`, a binary protobuf `Dataset` (also keeps
-  maDMP Dataset-level metadata). `--combined` adds `out/combined.pb.gz`.
-- **`pbtxt`** — `out/Exp###.pbtxt`, the human-readable protobuf text form.
+The app has two import paths, and inst2ord can target either:
+
+- **Templates ▸ Import from JSON** (default, `--format template`) — select
+  `out/Exp###.json` and type a template name in the dialog. The file is
+  `{"binpb": <base64 Reaction>, "variables": []}` (a single `Reaction`;
+  `variables` is the enumeration-placeholder array).
+- **Create Dataset from File** (`--format dataset|binpb|txtpb`) — select
+  `out/Exp###.json` / `.binpb` / `.txtpb`, a one-reaction `Dataset`. This
+  path also keeps the maDMP Dataset-level metadata; `--combined` writes
+  `out/combined.<ext>` with all runs.
+
+(The two formats are **not** interchangeable: the template importer reads
+`{binpb, variables}` for a `Reaction`; the dataset importer parses the file
+as a `Dataset`.)
 
 ## Compound resolution & curation
 
