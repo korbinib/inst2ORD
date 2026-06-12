@@ -24,6 +24,7 @@ from inst2ord.models import (
     ROLE_REAGENT,
     ROLE_SOLVENT,
 )
+from inst2ord.rinchi import build_rinchi
 
 _CID = reaction_pb2.CompoundIdentifier  # shorthand for identifier types
 
@@ -50,11 +51,17 @@ _VOLUME_UNITS = {
 }
 _AMOUNT_RE = re.compile(r"(\d+(?:\.\d+)?)\s*([a-zµ%]+)", re.IGNORECASE)
 
+# Optional identifiers the user can choose (NAME is always emitted). The
+# first four are per-compound structure ids; "rinchi" is reaction-level.
+IDENTIFIER_CHOICES = ("inchi", "inchikey", "smiles", "cas", "rinchi")
+_DEFAULT_IDENTIFIERS = frozenset(IDENTIFIER_CHOICES)
+
 
 def build_dataset(
     intents: list[ReactionIntent],
     madmp: MaDmp | None = None,
     name: str | None = None,
+    identifiers: frozenset[str] | None = None,
 ) -> dataset_pb2.Dataset:
     """Assemble a ``Dataset`` (one ``Reaction`` per intent)."""
     dataset = dataset_pb2.Dataset()
@@ -63,14 +70,21 @@ def build_dataset(
     if description:
         dataset.description = description
     for intent in intents:
-        dataset.reactions.append(build_reaction(intent, madmp))
+        dataset.reactions.append(build_reaction(intent, madmp, identifiers))
     return dataset
 
 
 def build_reaction(
-    intent: ReactionIntent, madmp: MaDmp | None = None
+    intent: ReactionIntent,
+    madmp: MaDmp | None = None,
+    identifiers: frozenset[str] | None = None,
 ) -> reaction_pb2.Reaction:
-    """Build one template ``Reaction`` from a single intent."""
+    """Build one template ``Reaction`` from a single intent.
+
+    ``identifiers`` selects which optional identifiers to emit (see
+    :data:`IDENTIFIER_CHOICES`); ``None`` means all. NAME is always emitted.
+    """
+    ids = _DEFAULT_IDENTIFIERS if identifiers is None else identifiers
     reaction = reaction_pb2.Reaction()
 
     identifier = reaction.identifiers.add()
@@ -82,9 +96,20 @@ def build_reaction(
         key = _input_key(comp.name, index)
         reaction_input = reaction.inputs[key]
         reaction_input.addition_order = index + 1
-        reaction_input.components.append(_build_compound(comp))
+        reaction_input.components.append(_build_compound(comp, ids))
+
+    # Reaction-level RInChI from the resolved input InChIs (reactant-only for
+    # a template; unresolved inputs count as no-structure). Coexists with the
+    # per-compound SMILES/InChI identifiers.
+    if "rinchi" in ids:
+        rinchi = build_rinchi([comp.inchi for comp in intent.inputs])
+        if rinchi:
+            rinchi_id = reaction.identifiers.add()
+            rinchi_id.type = reaction_pb2.ReactionIdentifier.RINCHI
+            rinchi_id.value = rinchi
 
     _build_setup(reaction.setup, intent)
+    _build_conditions(reaction.conditions, intent)
     reaction.notes.procedure_details = _procedure_details(intent, madmp)
     _build_provenance(reaction.provenance, intent, madmp)
     return reaction
@@ -92,13 +117,17 @@ def build_reaction(
 
 # --- compounds -------------------------------------------------------------
 
-def _build_compound(comp) -> reaction_pb2.Compound:
+def _build_compound(comp, ids: frozenset[str]) -> reaction_pb2.Compound:
     compound = reaction_pb2.Compound()
-    _add_identifier(compound, _CID.NAME, comp.name)
-    _add_identifier(compound, _CID.INCHI, comp.inchi)
-    _add_identifier(compound, _CID.INCHI_KEY, comp.inchikey)
-    _add_identifier(compound, _CID.SMILES, comp.smiles)
-    _add_identifier(compound, _CID.CAS_NUMBER, comp.cas)
+    _add_identifier(compound, _CID.NAME, comp.name)  # always
+    if "inchi" in ids:
+        _add_identifier(compound, _CID.INCHI, comp.inchi)
+    if "inchikey" in ids:
+        _add_identifier(compound, _CID.INCHI_KEY, comp.inchikey)
+    if "smiles" in ids:
+        _add_identifier(compound, _CID.SMILES, comp.smiles)
+    if "cas" in ids:
+        _add_identifier(compound, _CID.CAS_NUMBER, comp.cas)
     role = _ROLE_TO_ORD.get(comp.role)
     if role is not None:
         compound.reaction_role = role
@@ -186,6 +215,59 @@ def _platform_label(instrument: str) -> str:
     if instrument == "symyx-automation-studio":
         return "Symyx / Unchained Labs Automation Studio"
     return instrument
+
+
+# --- conditions (qualitative, inferred from deck names; low confidence) ----
+
+_LOW_CONFIDENCE = (
+    "Inferred by inst2ord from the instrument's deck-station names; "
+    "qualitative and low-confidence -- no setpoints or rates were recorded "
+    "in the source. Verify/complete in the editor."
+)
+_TEMP_CONTROL = reaction_pb2.TemperatureConditions.TemperatureControl
+_STIRRING = reaction_pb2.StirringConditions
+
+
+def _build_conditions(conditions, intent: ReactionIntent) -> None:
+    """Populate qualitative temperature/stirring from deck-station names.
+
+    The platform encodes hardware in deck labels like ``Heat-Stir`` /
+    ``Heat-Cool-Stir`` / ``Vortex``. Only what the label implies is asserted
+    (heating present, stirring vs vortexing); no setpoint or rpm is invented.
+    """
+    decks = " ".join(_deck_descriptors(intent)).lower()
+    has_heat = "heat" in decks
+    has_cool = "cool" in decks
+    has_stir = "stir" in decks
+    has_vortex = "vortex" in decks
+    if not (has_heat or has_cool or has_stir or has_vortex):
+        return
+
+    if has_heat or has_cool:
+        # No specific ORD enum for a heated stir block; use CUSTOM + details.
+        conditions.temperature.control.type = _TEMP_CONTROL.CUSTOM
+        kind = "heat/cool" if has_cool else "heated"
+        conditions.temperature.control.details = (
+            f"{kind} stir station (setpoint not recorded)"
+        )
+    if has_stir:
+        conditions.stirring.type = _STIRRING.STIR_BAR
+        conditions.stirring.details = "magnetic stir station"
+    elif has_vortex:
+        conditions.stirring.type = _STIRRING.AGITATION
+        conditions.stirring.details = "vortex mixing"
+    conditions.details = _LOW_CONFIDENCE
+
+
+def _deck_descriptors(intent: ReactionIntent) -> list[str]:
+    """Deck/station strings from labware and chemical substrate positions."""
+    descriptors = [lw.position for lw in intent.labware if lw.position]
+    descriptors += [
+        comp.extra["SubstratePosition"]
+        for comp in intent.inputs
+        if comp.extra.get("SubstratePosition")
+    ]
+    return descriptors
 
 
 # --- notes (free-text dump of everything not structurally mapped) ----------

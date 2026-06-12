@@ -23,7 +23,11 @@ import sys
 
 from inst2ord import export
 from inst2ord.adapters import available_adapters, detect_adapter, get_adapter
-from inst2ord.build_ord import build_dataset, build_reaction
+from inst2ord.build_ord import (
+    IDENTIFIER_CHOICES,
+    build_dataset,
+    build_reaction,
+)
 from inst2ord.madmp import parse_madmp, validate_madmp
 from inst2ord.resolve import CompoundResolver
 from inst2ord.validate import validate_dataset, validate_reaction
@@ -83,15 +87,17 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     ext = export.FORMAT_EXTENSIONS[args.format]
+    ids = frozenset(args.identifiers)
     os.makedirs(args.out, exist_ok=True)
     overall_ok = True
     for intent in intents:
         resolver.resolve_all(intent.inputs)
         path = os.path.join(args.out, f"{intent.run_id}.{ext}")
-        overall_ok &= _print_report(_emit(intent, madmp, args.format, path))
+        report = _emit(intent, madmp, args.format, path, ids)
+        overall_ok &= _print_report(report)
 
     if args.combined and args.format in export.DATASET_FORMATS and intents:
-        combined = build_dataset(intents, madmp)
+        combined = build_dataset(intents, madmp, identifiers=ids)
         export.write_dataset(
             combined, os.path.join(args.out, f"combined.{ext}")
         )
@@ -143,13 +149,13 @@ def _check_madmp_schema(path: str, strict: bool) -> bool:
     return True
 
 
-def _emit(intent, madmp, fmt: str, path: str):
+def _emit(intent, madmp, fmt: str, path: str, ids):
     """Build and write one run in ``fmt``; return its validation report."""
     if fmt == "template":
-        reaction = build_reaction(intent, madmp)
+        reaction = build_reaction(intent, madmp, ids)
         export.write_template(reaction, path)
         return validate_reaction(reaction, intent.run_id)
-    dataset = build_dataset([intent], madmp)
+    dataset = build_dataset([intent], madmp, identifiers=ids)
     export.write_dataset(dataset, path)
     return validate_dataset(dataset, intent.run_id)
 
@@ -198,6 +204,17 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         help="'template' (default) = JSON for Templates > Import from JSON "
         "(one Reaction); 'dataset'/'binpb'/'txtpb' = a Dataset for Create "
         "Dataset from File (JSON/binary/text)",
+    )
+    parser.add_argument(
+        "--identifiers",
+        nargs="+",
+        choices=list(IDENTIFIER_CHOICES),
+        default=list(IDENTIFIER_CHOICES),
+        metavar="ID",
+        help="which optional identifiers to emit (NAME is always included); "
+        f"choose from {', '.join(IDENTIFIER_CHOICES)} (default: all). "
+        "inchi/inchikey/smiles/cas are per-compound; rinchi is reaction-level "
+        "and needs resolved InChIs (--resolve or curation.csv)",
     )
     parser.add_argument(
         "--resolve",

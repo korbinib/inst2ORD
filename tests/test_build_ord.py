@@ -16,6 +16,7 @@ from inst2ord.models import (
 )
 
 _CID = reaction_pb2.CompoundIdentifier
+_SC = reaction_pb2.StirringConditions
 
 
 def _intent(**kw):
@@ -60,6 +61,67 @@ def test_inputs_identifiers_roles_and_amounts():
     water = rxn.inputs[keys[1]].components[0]
     assert water.amount.volume.value == pytest.approx(4.0)
     assert water.amount.volume.units == reaction_pb2.Volume.MILLILITER
+
+
+def test_identifier_selection_limits_compound_ids():
+    intent = _intent(inputs=[InputComponent(
+        name="phenol", role=ROLE_REACTANT,
+        inchi="InChI=1S/C6H6O/c7-6-4-2-1-3-5-6/h1-5,7H",
+        inchikey="ISWSIDIOOBJBQZ-UHFFFAOYSA-N", smiles="Oc1ccccc1",
+    )])
+    rxn = build_reaction(intent, identifiers=frozenset({"inchi"}))
+    comp = next(iter(rxn.inputs.values())).components[0]
+    types = {i.type for i in comp.identifiers}
+    assert _CID.NAME in types and _CID.INCHI in types  # NAME always kept
+    assert _CID.SMILES not in types and _CID.INCHI_KEY not in types
+    rinchi = reaction_pb2.ReactionIdentifier.RINCHI
+    assert all(i.type != rinchi for i in rxn.identifiers)
+
+
+def test_rinchi_only_selection():
+    intent = _intent(inputs=[InputComponent(
+        name="phenol", role=ROLE_REACTANT,
+        inchi="InChI=1S/C6H6O/c7-6-4-2-1-3-5-6/h1-5,7H",
+    )])
+    rxn = build_reaction(intent, identifiers=frozenset({"rinchi"}))
+    rinchi = reaction_pb2.ReactionIdentifier.RINCHI
+    assert any(i.type == rinchi for i in rxn.identifiers)
+    comp = next(iter(rxn.inputs.values())).components[0]
+    assert {i.type for i in comp.identifiers} == {_CID.NAME}
+
+
+def test_conditions_inferred_from_deck_names():
+    intent = _intent(
+        inputs=[InputComponent(name="water", role=ROLE_REACTANT)],
+        labware=[Labware(kind="Rack 8x12 1mL Vial",
+                         position="Deck 8-9 Heat-Cool-Stir 1")],
+    )
+    rxn = build_reaction(intent)
+    assert rxn.HasField("conditions")
+    tc = reaction_pb2.TemperatureConditions.TemperatureControl
+    assert rxn.conditions.temperature.control.type == tc.CUSTOM
+    assert rxn.conditions.stirring.type == _SC.STIR_BAR
+    assert "low-confidence" in rxn.conditions.details.lower()
+    assert not rxn.conditions.temperature.HasField("setpoint")
+
+
+def test_vortex_maps_to_agitation_without_temperature():
+    intent = _intent(
+        inputs=[InputComponent(name="water", role=ROLE_REACTANT)],
+        labware=[Labware(kind="Rack 4x6 4mL Vial",
+                         position="Deck 6-7 Vortex 2")],
+    )
+    rxn = build_reaction(intent)
+    assert rxn.conditions.stirring.type == _SC.AGITATION
+    assert not rxn.conditions.HasField("temperature")
+
+
+def test_no_conditions_without_deck_hints():
+    intent = _intent(
+        inputs=[InputComponent(name="water", role=ROLE_REACTANT)],
+        labware=[Labware(kind="Vial", position="Deck 2 Balance")],
+    )
+    assert not build_reaction(intent).HasField("conditions")
 
 
 def test_setup_vessel_inferred_from_labware():

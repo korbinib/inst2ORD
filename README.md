@@ -83,6 +83,10 @@ python -m inst2ord.cli examples/xmls \
 python -m inst2ord.cli examples/xmls --madmp examples/madmp/ex9-dmp-long.json \
     --out out --resolve
 
+# Choose which identifiers to emit (NAME is always kept); see Identifiers
+python -m inst2ord.cli examples/xmls --resolve \
+    --identifiers inchi inchikey rinchi --out out
+
 # Import as a Dataset instead (Create Dataset from File)
 python -m inst2ord.cli examples/xmls --out out --format dataset  # or binpb/txtpb
 python -m inst2ord.cli examples/xmls --out out --format binpb --combined
@@ -114,10 +118,17 @@ Both formats contain the same per-reaction content built from the
 instrument files + maDMP:
 
 - **Reaction inputs** — one component per loaded chemical, with a `NAME`
-  identifier and (after `--resolve`) `INCHI`/`INCHI_KEY`/`SMILES`; amounts
-  recovered from the name where present.
+  identifier and (after `--resolve`) `INCHI`/`INCHI_KEY`/`SMILES`/`CAS`
+  (selectable with `--identifiers`, see below); amounts recovered from the
+  name where present.
+- **Identifiers (reaction-level)** — a `CUSTOM` identifier holding the run
+  id (e.g. `Exp333`), plus a `RINCHI` assembled from the resolved input
+  InChIs when available (opt-in via `--identifiers`, see below).
 - **Setup** — vessel type/details/position, `is_automated`, automation
   platform.
+- **Conditions** — qualitative `temperature`/`stirring` inferred from deck
+  station names (`Heat-Stir` → heated + stir bar, `Vortex` → agitation),
+  flagged low-confidence in `conditions.details`; no setpoints/rpm invented.
 - **Provenance** — `experimenter` and `record_created` (person + time +
   DOI) from the maDMP (see below).
 - **Notes** — a free-text dump of labware, run/setup options, source files,
@@ -155,6 +166,36 @@ schema** before use: issues are printed as warnings and processing
 continues, unless `--strict-madmp` is passed, which aborts on any schema
 violation. (Validation needs the `jsonschema` package; if it is missing the
 check is skipped.)
+
+## Identifiers (`--identifiers`)
+
+Choose which optional identifiers to emit; **`NAME` is always included**.
+The default is all of them.
+
+| value | level | ORD identifier |
+| --- | --- | --- |
+| `inchi` | compound | `INCHI` |
+| `inchikey` | compound | `INCHI_KEY` |
+| `smiles` | compound | `SMILES` (derived from the InChI via RDKit) |
+| `cas` | compound | `CAS_NUMBER` (from the curation table) |
+| `rinchi` | reaction | `RINCHI`, assembled from the resolved input InChIs |
+
+```bash
+# InChI + InChIKey + reaction RInChI only (no SMILES/CAS); needs resolution
+python -m inst2ord.cli examples/xmls --resolve \
+    --identifiers inchi inchikey rinchi --out out
+```
+
+Notes:
+
+- The structure identifiers (`inchi`/`inchikey`/`smiles`/`cas`) and `rinchi`
+  are only populated once names are resolved (via `--resolve` or
+  `curation.csv`); without resolution only `NAME` is emitted.
+- `rinchi` is **reaction-level** and coexists with the per-compound
+  identifiers — it does not replace `smiles`. It is built from the component
+  InChIs in the RInChI 1.00 string format and is reactant-only for a template
+  (no products). Canonical RInChIKeys still require the official IUPAC RInChI
+  toolkit.
 
 ## Compound resolution & curation
 
