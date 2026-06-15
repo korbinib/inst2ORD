@@ -1,0 +1,47 @@
+<Symyx.AutomationStudio.Core.ChemicalManager>
+	<Symyx.AutomationStudio.Core.ChemicalManager.Chemicals>
+		<Symyx.AutomationStudio.Core.ChemicalManager.Chemical>
+			<Name>Motherplate</Name>
+			<AmountLeft>-1</AmountLeft>
+			<Color>-8708137</Color>
+			<Column>0</Column>
+			<Columns>0</Columns>
+			<Empty>False</Empty>
+			<Questionable>False</Questionable>
+			<Row>0</Row>
+			<Rows>0</Rows>
+			<Size>0</Size>
+			<SubstratePosition>Deck 8-9 Heat-Stir 2</SubstratePosition>
+			<SubstrateType>Rack 4x6 8mL Vial</SubstrateType>
+			<Type>stPlate</Type>
+			<ValveResource />
+			<ValvePosition>0</ValvePosition>
+			<Units>undefined</Units>
+		</Symyx.AutomationStudio.Core.ChemicalManager.Chemical>
+	</Symyx.AutomationStudio.Core.ChemicalManager.Chemicals>
+	<Symyx.AutomationStudio.Core.ChemicalManager.Libraries>
+		<Symyx.AutomationStudio.Core.ChemicalManager.Library>
+			<LibraryID>100285</LibraryID>
+			<Name>Daughterplate</Name>
+			<NumOfRows>6</NumOfRows>
+			<NumOfCols>8</NumOfCols>
+			<SubstrateType>Rack 6x8 2mL Vial</SubstrateType>
+			<SubstratePosition>Deck 8-9 Heat-Cool-Stir 1</SubstratePosition>
+			<Symyx.AutomationStudio.Core.ChemicalManager.Wells />
+		</Symyx.AutomationStudio.Core.ChemicalManager.Library>
+		<Symyx.AutomationStudio.Core.ChemicalManager.Library>
+			<LibraryID>100284</LibraryID>
+			<Name>Motherplate</Name>
+			<NumOfRows>4</NumOfRows>
+			<NumOfCols>6</NumOfCols>
+			<SubstrateType>Rack 4x6 8mL Vial</SubstrateType>
+			<SubstratePosition>Deck 8-9 Heat-Stir 2</SubstratePosition>
+			<Symyx.AutomationStudio.Core.ChemicalManager.Wells />
+		</Symyx.AutomationStudio.Core.ChemicalManager.Library>
+	</Symyx.AutomationStudio.Core.ChemicalManager.Libraries>
+</Symyx.AutomationStudio.Core.ChemicalManager>
+<ChemicalsAndAssociatedDispenseModes>
+<ChemicalManager>
+  <Chemical Name="Motherplate" Mode="Non-Viscous Liquid|ADT" />
+</ChemicalManager>
+</ChemicalsAndAssociatedDispenseModes>

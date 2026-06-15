@@ -5,9 +5,6 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 
-# Examples
-/examples/xmls
-
 # inst2ord generated artifacts
 /out/
 /cache/

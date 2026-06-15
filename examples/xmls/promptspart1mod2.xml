@@ -1,0 +1,134 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<promptsOptionsConfiguration  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="PromptOptionsConfig.xsd">
+  <categories>
+    <category description="Design loading options" name="DesignLoadingOption" >
+      <prompts>
+        <prompt name="DesignLoadType"   type="List[System.String]"   description="Autoload full library">AutoLoadFullLibrary;@LoadSelectedWell</prompt>
+        <prompt name="WellsToLoad"   type="List[System.String]"   description="Select wells to load">
+          [895:1,2,3,4,5,6];
+          
+		</prompt>
+        <prompt name="FilterMapType"   type="List[System.String]"   description="Filter maps">FilterByTag;FilterByMap;@No</prompt>
+        <prompt name="TagToFilterMaps"   type="System.String"   description="Select tag to filter maps"></prompt>
+        <prompt name="MapsToExecute"   type="List[System.Int32]"   description="Select maps to execute">0</prompt>
+        <prompt name="LoadDesignerCreatorChemicalManagerData"   type="List[System.String]"   description="Load Design Creator Chemical Manager data">No;@Yes</prompt>
+        <prompt name="ForceHardwareInitialization"   type="List[System.String]"   description="Force hardware initialization">@No;Yes</prompt>
+        <prompt name="SendEmailNotification"   type="List[System.String]"   description="Send email notifications">@No;Yes</prompt>
+        <prompt name="SendTextNotification"   type="List[System.String]"   description="Send text notifications">@No;Yes</prompt>
+        <prompt name="EmailNotificationList"   type="List[System.String]"   description="Email notification list">test1@gmail.com;test2@gmail.com</prompt>
+        <prompt name="TextNotificationList"   type="List[System.String]"   description="Text notification list">+1 925 258 2840;+1 925 258 2840</prompt>
+
+      </prompts>
+    </category>
+    <category description="OSR reactor settings" name="OSRReactor" >
+      <prompts>
+        <!--Example-->
+        <!--<prompt name="PressureControlMode"   type="List[System.String]"   description="Current pressure control mode">[OSR Module 1:Auto];[OSR Module 2:Semi-Auto]</prompt>-->
+        <prompt name="PressureControlMode"   type="List[System.String]"   description="Current pressure control mode">[#OSR Module Name:Semi-Auto];[#OSR Module Name:Auto]</prompt>
+
+        <!--Example-->
+        <!--<prompt name="ResetReactorModule"   type="List[System.String]"   description="Reset reactor module">[OSR Module 1:No];[OSR Module 2:Yes]</prompt>-->
+        <prompt name="ResetReactorModule"   type="List[System.String]"   description="Reset reactor module">[#OSR Module Name:No];[#OSR Module Name:Yes]</prompt>
+
+        <prompt name="TagDataMonitors"   type="List[System.String]"   description="Tag data monitors">No;@Yes</prompt>
+        <prompt name="TagUptake"   type="List[System.String]"   description="Tag uptake">No;@Yes</prompt>
+        <prompt name="TagRegulatorPressures"   type="List[System.String]"   description="Tag regulator pressures">No;@Yes</prompt>
+        <prompt name="TagStirTopTemperatures"   type="List[System.String]"   description="Tag stir top temperatures">No;@Yes</prompt>
+        <prompt name="TagAntechamberPressure"   type="List[System.String]"   description="Save antechamber pressure data monitor traces">No;@Yes</prompt>
+
+      </prompts>
+    </category>
+    <category description="pH options:" name="pHOptions-solidstate" >
+      <prompts>
+        <prompt name="pHStorageVialsRemoved"   type="List[System.String]"   description="Confirm pH storage vials removed from probes">No;@Yes</prompt>
+        <prompt name="pHProbeSpacing"   type="List[System.String]"   description="pH probe pitch (mm)">@9 mm;13 mm</prompt>
+        <prompt name="pHSingleChannelMode"   type="List[System.String]"   description="Force single channel mode">@No;Yes</prompt>
+        <prompt name="pHMeasBtwConditioning"   type="System.Int32"   description="Number of measurements between conditioning steps">-1</prompt>
+        <prompt name="pHReplicates"   type="System.Int32"   description="Number of replicate measurements">1</prompt>
+        <prompt name="pHCalibrationLoadType"   type="List[System.String]"   description="pH probe calibration load type">@Auto Load Most Recent;Load By ID</prompt>
+        <prompt name="pHCalibrationLoadByID"   type="System.Int32"   description="pH probe calibration">##CalibrationId</prompt>
+      </prompts>
+    </category>
+    <category description="pH adjustment settings:" name="pHAdjustmentSettings" >
+      <prompts>
+        <prompt name="pHAdjustMixerResourceType"   type="List[System.String]"   description="pH adjustment mixer type">Stir;@Vortex</prompt>
+        <prompt name="pHAdjustMixingRate"   type="System.Double"   description="pH adjustment mixing rate (rpm)">300</prompt>
+        <prompt name="pHAdjustMixingDuration_sec"   type="System.Int32"   description="pH adjustment mixing duration (s)">60</prompt>
+        <prompt name="StopAdjustIfOvershoot"   type="List[System.String]"   description="Stop if pH target is under/overshot">No;@Yes</prompt>
+        <prompt name="pHAdjustmentTolerance"   type="System.Double"   description="pH adjustment tolerance">0.05</prompt>
+        <prompt name="pHDifferenceThreshold"   type="System.Double"   description="pH difference threshold">0.2</prompt>
+        <prompt name="pHAdjustVolumeLarge"   type="System.Double"   description="Adjust volume if pH difference &gt; threshold (?L)">50</prompt>
+        <prompt name="pHAdjustVolumeSmall"   type="System.Double"   description="Adjust volume if pH difference &lt; threshold (?L)">50</prompt>
+        <prompt name="pHAdjustMaxAdditions"   type="System.Int32"   description="pH adjustment maximum acid/base additions">50</prompt>
+      </prompts>
+    </category>
+    <category description="pH options:" name="pHOptions" >
+      <prompts>
+        <prompt name="pHStorageFixtureOnArm"   type="List[System.String]"   description="Is the pH storage vial fixture on the arm?">No;@Yes</prompt>
+        <prompt name="pHForceCalibration"   type="List[System.String]"   description="Calibrate pH before first measurement">No;@Yes</prompt>
+        <prompt name="pHSingleChannelMode"   type="List[System.String]"   description="Force single channel glass pH mode">@No;Yes</prompt>
+        <prompt name="phWashDunkCycles"   type="System.Int32"   description="Number of dunk cycles">3</prompt>
+        <prompt name="pHAirDryCycles"   type="System.Int32"   description="Number of air dry cycles">1</prompt>
+        <prompt name="pHWashDunkSpeed"   type="System.Double"   description="Wash speed (mm/s)">400</prompt>
+        <prompt name="pHReplicates"   type="System.Int32"   description="Number of replicate measurements">1</prompt>
+      </prompts>
+    </category>
+    <category description="Filter block options" name="FilterBlockOption" >
+      <prompts>
+        <prompt name="Positions"   type="System.String"   description="Select new positions">1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96</prompt>
+      </prompts>
+    </category>
+    <category description="Initial state for each library:" name="LibraryInitialStates" >
+      <prompts>
+        <prompt name="LibraryInitialState"   type="List[System.String]"   description="Initial state for each library">[895:None]</prompt>
+      </prompts>
+    </category>
+    <category description="Initial state for each source substrate:" name="SourceInitialStates" >
+      <prompts>
+        <prompt name="SourceInitialState"   type="List[System.String]"   description="Initial state for each source substrate">
+          [None:None]
+        </prompt>
+      </prompts>
+    </category>
+    
+    <category description="Viscometer options:" name="ViscometerOptions" >
+      <prompts>
+        <prompt name="TurnOffViscometer"   type="List[System.String]"   description="Turn off temp control after run">No;@Yes</prompt>
+      </prompts>
+    </category>
+    <category description="Balance options:" name="BalanceOptions" >
+      <prompts>
+        <prompt name="BalanceSetup"   type="List[System.String]"   description="Current balance set up">@Vial;Plate</prompt>
+        <prompt name="NoVialOrPlateOnBalnce"   type="List[System.String]"   description="Confirm that balance door is open and no vial/plate is on the balance">@Yes;No</prompt>
+
+      </prompts>
+    </category>
+    <category description="Lunatic:" name="LunaticPlateCategory" >
+      <prompts>
+        <prompt name="LunaticPlateType"   type="List[System.String]"   description="Lunatic Plate Type">High Lunatic;@Lunatic</prompt>
+      </prompts>
+    </category>
+    <category description="VIS options:" name="VISOptions" >
+      <prompts>
+        <prompt name="NoVialInImagingStation"   type="List[System.String]"   description="Confirm imaging station does not contain a vial">No;@Yes</prompt>
+        <prompt name="WaitForLampWarmUp"   type="List[System.String]"   description="Wait for lamp to warm up">No;@Yes</prompt>
+        <prompt name="LampWarmUpTime"   type="System.Int32"   description="Lamp warm up time (min)">15</prompt>
+        <prompt name="TurnOffVISLamps"   type="List[System.String]"   description="Turn off lamp after run">No;@Yes</prompt>
+        <prompt name="ConfirmInstalledSlit"   type="List[System.String]"   description="Which slit is installed (mm)">@6;11</prompt>
+        <prompt name="UseSameProfilesForAllLibraries"   type="List[System.String]"   description="Use the same motion and analysis profiles for all libraries">No;@Yes</prompt>
+        <prompt name="MotionProfile"   type="System.String"   description="Motion profile">##ProfileName</prompt>
+        <prompt name="MotionProfiles"   type="List[System.String]"   description="Motion profile">[##LibraryId:##ProfileName];[##LibraryId:##ProfileName]</prompt>
+        <prompt name="AnalysisProfile"   type="System.String"   description="Analysis profile">##ProfileName</prompt>
+        <prompt name="AnalysisProfiles"   type="List[System.String]"   description="Analysis profile">[##LibraryId:##ProfileName];[##LibraryId:##ProfileName]</prompt>
+        <prompt name="TurbidityCalibrationLoadMethod"   type="List[System.String]"   description="Method for loading turbidity calibrations">@Auto Load Most Recent;Manually select</prompt>
+        <prompt name="ColorCalibrationLoadMethod"   type="List[System.String]"   description="Color calibration to use">@Auto Load Most Recent;Manually select</prompt>
+
+        <prompt name="PromptForColorCalibration"   type="List[System.String]"   description="Load by ID">[##LibraryId:##CalibrationId];[##LibraryId:##CalibrationId]</prompt>
+        <prompt name="PromptForHighNTUCalibration"   type="List[System.String]"   description="Load high NTU calibration by ID">[##LibraryId:##CalibrationId];[##LibraryId:##CalibrationId]</prompt>
+        <prompt name="PromptForLowNTUCalibration"   type="List[System.String]"   description="Load low NTU calibration by ID">[##LibraryId:##CalibrationId];[##LibraryId:##CalibrationId]</prompt>
+
+      </prompts>
+    </category>
+  </categories>
+</promptsOptionsConfiguration>
+

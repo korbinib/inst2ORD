@@ -1,0 +1,66 @@
+<Symyx.AutomationStudio.Core.ChemicalManager>
+	<Symyx.AutomationStudio.Core.ChemicalManager.Chemicals>
+		<Symyx.AutomationStudio.Core.ChemicalManager.Chemical>
+			<Name>Plate1</Name>
+			<AmountLeft>-1</AmountLeft>
+			<Color>-10269077</Color>
+			<Column>0</Column>
+			<Columns>0</Columns>
+			<Empty>False</Empty>
+			<Questionable>False</Questionable>
+			<Row>0</Row>
+			<Rows>0</Rows>
+			<Size>-1</Size>
+			<SubstratePosition>Deck 8-9 Heat-Stir 2</SubstratePosition>
+			<SubstrateType>Rack 8x12 1mL Vial</SubstrateType>
+			<Type>stPlate</Type>
+			<ValveResource />
+			<ValvePosition>0</ValvePosition>
+			<Units>undefined</Units>
+		</Symyx.AutomationStudio.Core.ChemicalManager.Chemical>
+		<Symyx.AutomationStudio.Core.ChemicalManager.Chemical>
+			<Name>water</Name>
+			<AmountLeft>-1</AmountLeft>
+			<Color>-4145152</Color>
+			<Column>0</Column>
+			<Columns>1</Columns>
+			<Empty>False</Empty>
+			<Questionable>False</Questionable>
+			<Row>0</Row>
+			<Rows>1</Rows>
+			<Size>-1</Size>
+			<SubstratePosition />
+			<SubstrateType />
+			<Type>stNormal</Type>
+			<ValveResource />
+			<ValvePosition>0</ValvePosition>
+			<Units>undefined</Units>
+		</Symyx.AutomationStudio.Core.ChemicalManager.Chemical>
+	</Symyx.AutomationStudio.Core.ChemicalManager.Chemicals>
+	<Symyx.AutomationStudio.Core.ChemicalManager.Libraries>
+		<Symyx.AutomationStudio.Core.ChemicalManager.Library>
+			<LibraryID>100261</LibraryID>
+			<Name />
+			<NumOfRows>8</NumOfRows>
+			<NumOfCols>12</NumOfCols>
+			<SubstrateType>Rack 8x12 1mL Vial</SubstrateType>
+			<SubstratePosition>Deck 8-9 Heat-Stir 2</SubstratePosition>
+			<Symyx.AutomationStudio.Core.ChemicalManager.Wells />
+		</Symyx.AutomationStudio.Core.ChemicalManager.Library>
+		<Symyx.AutomationStudio.Core.ChemicalManager.Library>
+			<LibraryID>100262</LibraryID>
+			<Name />
+			<NumOfRows>8</NumOfRows>
+			<NumOfCols>12</NumOfCols>
+			<SubstrateType>Rack 8x12 1mL Vial</SubstrateType>
+			<SubstratePosition>Deck 8-9 Heat-Stir 3</SubstratePosition>
+			<Symyx.AutomationStudio.Core.ChemicalManager.Wells />
+		</Symyx.AutomationStudio.Core.ChemicalManager.Library>
+	</Symyx.AutomationStudio.Core.ChemicalManager.Libraries>
+</Symyx.AutomationStudio.Core.ChemicalManager>
+<ChemicalsAndAssociatedDispenseModes>
+<ChemicalManager>
+  <Chemical Name="Plate1" Mode="Non-Viscous Liquid|ADT" />
+  <Chemical Name="water" Mode="Non-Viscous Liquid|ADT" />
+</ChemicalManager>
+</ChemicalsAndAssociatedDispenseModes>

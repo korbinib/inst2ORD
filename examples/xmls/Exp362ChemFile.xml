@@ -1,0 +1,85 @@
+<Symyx.AutomationStudio.Core.ChemicalManager>
+	<Symyx.AutomationStudio.Core.ChemicalManager.Chemicals>
+		<Symyx.AutomationStudio.Core.ChemicalManager.Chemical>
+			<Name>Allura Red AC</Name>
+			<AmountLeft>-1</AmountLeft>
+			<Color>-65536</Color>
+			<Column>0</Column>
+			<Columns>1</Columns>
+			<Empty>False</Empty>
+			<Questionable>False</Questionable>
+			<Row>0</Row>
+			<Rows>1</Rows>
+			<Size>-1</Size>
+			<SubstratePosition />
+			<SubstrateType />
+			<Type>stNormal</Type>
+			<ValveResource />
+			<ValvePosition>0</ValvePosition>
+			<Units>undefined</Units>
+		</Symyx.AutomationStudio.Core.ChemicalManager.Chemical>
+		<Symyx.AutomationStudio.Core.ChemicalManager.Chemical>
+			<Name>Brilliant Blue FCF</Name>
+			<AmountLeft>-1</AmountLeft>
+			<Color>-16776961</Color>
+			<Column>0</Column>
+			<Columns>1</Columns>
+			<Empty>False</Empty>
+			<Questionable>False</Questionable>
+			<Row>0</Row>
+			<Rows>1</Rows>
+			<Size>-1</Size>
+			<SubstratePosition />
+			<SubstrateType />
+			<Type>stNormal</Type>
+			<ValveResource />
+			<ValvePosition>0</ValvePosition>
+			<Units>undefined</Units>
+		</Symyx.AutomationStudio.Core.ChemicalManager.Chemical>
+		<Symyx.AutomationStudio.Core.ChemicalManager.Chemical>
+			<Name>Starting material plate</Name>
+			<AmountLeft>-1</AmountLeft>
+			<Color>-65536</Color>
+			<Column>0</Column>
+			<Columns>12</Columns>
+			<Empty>False</Empty>
+			<Questionable>False</Questionable>
+			<Row>0</Row>
+			<Rows>8</Rows>
+			<Size>-1</Size>
+			<SubstratePosition>Deck 8-9 Heat-Stir 2</SubstratePosition>
+			<SubstrateType>Rack 8x12 1mL Vial</SubstrateType>
+			<Type>stPlate</Type>
+			<ValveResource />
+			<ValvePosition>0</ValvePosition>
+			<Units>undefined</Units>
+		</Symyx.AutomationStudio.Core.ChemicalManager.Chemical>
+	</Symyx.AutomationStudio.Core.ChemicalManager.Chemicals>
+	<Symyx.AutomationStudio.Core.ChemicalManager.Libraries>
+		<Symyx.AutomationStudio.Core.ChemicalManager.Library>
+			<LibraryID>100202</LibraryID>
+			<Name />
+			<NumOfRows>8</NumOfRows>
+			<NumOfCols>12</NumOfCols>
+			<SubstrateType>Rack 8x12 1mL Vial</SubstrateType>
+			<SubstratePosition>Deck 8-9 Heat-Stir 2</SubstratePosition>
+			<Symyx.AutomationStudio.Core.ChemicalManager.Wells />
+		</Symyx.AutomationStudio.Core.ChemicalManager.Library>
+		<Symyx.AutomationStudio.Core.ChemicalManager.Library>
+			<LibraryID>100203</LibraryID>
+			<Name />
+			<NumOfRows>8</NumOfRows>
+			<NumOfCols>12</NumOfCols>
+			<SubstrateType>Rack 8x12 1mL Vial</SubstrateType>
+			<SubstratePosition>Deck 8-9 Heat-Stir 3</SubstratePosition>
+			<Symyx.AutomationStudio.Core.ChemicalManager.Wells />
+		</Symyx.AutomationStudio.Core.ChemicalManager.Library>
+	</Symyx.AutomationStudio.Core.ChemicalManager.Libraries>
+</Symyx.AutomationStudio.Core.ChemicalManager>
+<ChemicalsAndAssociatedDispenseModes>
+<ChemicalManager>
+  <Chemical Name="Starting material plate" Mode="Non-Viscous Liquid|ADT" />
+  <Chemical Name="Brilliant Blue FCF" Mode="Non-Viscous Liquid|ADT" />
+  <Chemical Name="Allura Red AC" Mode="Non-Viscous Liquid|ADT" />
+</ChemicalManager>
+</ChemicalsAndAssociatedDispenseModes>

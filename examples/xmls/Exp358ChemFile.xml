@@ -1,0 +1,38 @@
+<Symyx.AutomationStudio.Core.ChemicalManager>
+	<Symyx.AutomationStudio.Core.ChemicalManager.Chemicals>
+		<Symyx.AutomationStudio.Core.ChemicalManager.Chemical>
+			<Name>water</Name>
+			<AmountLeft>-1</AmountLeft>
+			<Color>-6732235</Color>
+			<Column>0</Column>
+			<Columns>0</Columns>
+			<Empty>False</Empty>
+			<Questionable>False</Questionable>
+			<Row>0</Row>
+			<Rows>0</Rows>
+			<Size>0</Size>
+			<SubstratePosition />
+			<SubstrateType />
+			<Type>stBackingSolvent</Type>
+			<ValveResource>Syringe 1</ValveResource>
+			<ValvePosition>1</ValvePosition>
+			<Units>undefined</Units>
+		</Symyx.AutomationStudio.Core.ChemicalManager.Chemical>
+	</Symyx.AutomationStudio.Core.ChemicalManager.Chemicals>
+	<Symyx.AutomationStudio.Core.ChemicalManager.Libraries>
+		<Symyx.AutomationStudio.Core.ChemicalManager.Library>
+			<LibraryID>100197</LibraryID>
+			<Name>Plate1</Name>
+			<NumOfRows>4</NumOfRows>
+			<NumOfCols>6</NumOfCols>
+			<SubstrateType>Rack 4x6 4mL Vial</SubstrateType>
+			<SubstratePosition>Deck 6-7 Vortex 2</SubstratePosition>
+			<Symyx.AutomationStudio.Core.ChemicalManager.Wells />
+		</Symyx.AutomationStudio.Core.ChemicalManager.Library>
+	</Symyx.AutomationStudio.Core.ChemicalManager.Libraries>
+</Symyx.AutomationStudio.Core.ChemicalManager>
+<ChemicalsAndAssociatedDispenseModes>
+<ChemicalManager>
+  <Chemical Name="water" Mode="Non-Viscous Liquid|ADT" />
+</ChemicalManager>
+</ChemicalsAndAssociatedDispenseModes>
