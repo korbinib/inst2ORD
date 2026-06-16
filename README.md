@@ -3,7 +3,7 @@
 Map the XML files produced by a high-throughput chemistry platform (and,
 optionally, a machine-actionable Data Management Plan / maDMP) onto the
 [Open Reaction Database](https://docs.open-reaction-database.org/) (ORD)
-schema, and emit files that can be imported as **templates** into the ORD
+schema, and emit files that can be imported as **templates** or **datasets** into the ORD
 reaction editor.
 
 ## What it does
