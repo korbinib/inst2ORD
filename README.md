@@ -29,32 +29,6 @@ outcomes). inst2ord therefore produces **template-grade** ORD reactions:
 inputs, setup and provenance are populated; amounts and outcomes are left
 blank to be completed in the editor.
 
-## Layout
-
-| Path | Role |
-| --- | --- |
-| `inst2ord/models.py` | Neutral, instrument-agnostic intermediate (`ReactionIntent`) + maDMP model |
-| `inst2ord/adapters/` | One adapter per instrument; `base.py` is the contract, `__init__.py` the registry |
-| `inst2ord/adapters/symyx_automation_studio.py` | First instrument: Symyx / Unchained Labs Automation Studio |
-| `inst2ord/madmp.py` | maDMP (RDA-DMP-Common 1.2) JSON → `MaDmp`, + schema validation against the bundled `schemas/maDMP-schema-1.2.json` |
-| `inst2ord/resolve.py` | Name → InChI/InChIKey via curation table + cached PubChem (+ RDKit) |
-| `inst2ord/build_ord.py` | `ReactionIntent` (+ `MaDmp`) → ORD `Reaction`/`Dataset` (the only module touching ORD protobufs) |
-| `inst2ord/validate.py` | Wrapper over `ord_schema.validations` |
-| `inst2ord/export.py` | Serialise to a web-app JSON template or a protobuf `Dataset` |
-| `inst2ord/cli.py` | Command-line entry point |
-
-### Adding another instrument
-
-Write a new `InstrumentAdapter` subclass that parses its native files into
-`ReactionIntent`s and register it in `inst2ord/adapters/__init__.py`.
-Nothing downstream (builder, validation, resolver, maDMP merge, CLI)
-changes — the instrument mapping is fully exchangeable.
-
-Today the adapter is chosen by `--instrument` or by sniffing the input
-directory (`detect_adapter`). **Planned:** when a maDMP is supplied, its
-`dataset[].technical_resource` entries could pick the adapter automatically
-by matching the resource name/description against each adapter.
-
 ## Setup
 
 ```bash
@@ -98,6 +72,8 @@ python -m inst2ord.cli examples/xmls --madmp examples/madmp/ex9-dmp-long.json --
 # Inspect parsing only (neutral intermediate as JSON; no ORD, no network)
 python -m inst2ord.cli examples/xmls --dry-run
 ```
+
+The resulting files can be directly used in an  [ORD submission](https://docs.open-reaction-database.org/en/latest/submissions.html), e.g. via the the [online ORD reaction editor](https://app.open-reaction-database.org/).
 
 ## Template vs Dataset export
 
@@ -222,3 +198,31 @@ Validation reuses `ord_schema.validations` directly. Because templates are
 incomplete by design, the validator reports some *expected gaps* (no
 amounts, no outcomes, and — for setup-only runs — no inputs); these are
 counted separately from genuinely unexpected problems.
+
+## Layout
+
+| Path | Role |
+| --- | --- |
+| `inst2ord/models.py` | Neutral, instrument-agnostic intermediate (`ReactionIntent`) + maDMP model |
+| `inst2ord/adapters/` | One adapter per instrument; `base.py` is the contract, `__init__.py` the registry |
+| `inst2ord/adapters/symyx_automation_studio.py` | First instrument: Symyx / Unchained Labs Automation Studio |
+| `inst2ord/madmp.py` | maDMP (RDA-DMP-Common 1.2) JSON → `MaDmp`, + schema validation against the bundled `schemas/maDMP-schema-1.2.json` |
+| `inst2ord/resolve.py` | Name → InChI/InChIKey via curation table + cached PubChem (+ RDKit) |
+| `inst2ord/build_ord.py` | `ReactionIntent` (+ `MaDmp`) → ORD `Reaction`/`Dataset` (the only module touching ORD protobufs) |
+| `inst2ord/validate.py` | Wrapper over `ord_schema.validations` |
+| `inst2ord/export.py` | Serialise to a web-app JSON template or a protobuf `Dataset` |
+| `inst2ord/cli.py` | Command-line entry point |
+
+### Adding another instrument
+
+Write a new `InstrumentAdapter` subclass that parses its native files into
+`ReactionIntent`s and register it in `inst2ord/adapters/__init__.py`.
+Nothing downstream (builder, validation, resolver, maDMP merge, CLI)
+changes — the instrument mapping is fully exchangeable.
+
+Today the adapter is chosen by `--instrument` or by sniffing the input
+directory (`detect_adapter`). **Planned:** when a maDMP is supplied, its
+`dataset[].technical_resource` entries could pick the adapter automatically
+by matching the resource name/description against each adapter.
+
+
