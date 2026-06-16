@@ -75,29 +75,33 @@ The suite is offline — PubChem is monkeypatched, so no network is needed.
 ## Usage
 
 ```bash
-# Default: one JSON template per run for the ORD web app (no network)
-python -m inst2ord.cli examples/xmls \
-    --madmp examples/madmp/ex9-dmp-long.json --out out
+# Default: one JSON template per run for the online ORD reaction editor (no network) - only reaction level information 
+python -m inst2ord.cli examples/xmls --out out
+```
 
-# Enrich compounds via PubChem (InChI/InChIKey, SMILES via RDKit)
-python -m inst2ord.cli examples/xmls --madmp examples/madmp/ex9-dmp-long.json \
-    --out out --resolve
+```bash
+# one JSON template per run for the online ORD reaction editor - only reaction level information; enriched compounds via PubChem (InChI/InChIKey, SMILES via RDKit)
+python -m inst2ord.cli examples/xmls --out out --resolve
+```
 
+```bash
 # Choose which identifiers to emit (NAME is always kept); see Identifiers
-python -m inst2ord.cli examples/xmls --resolve \
-    --identifiers inchi inchikey rinchi --out out
+python -m inst2ord.cli examples/xmls --resolve --identifiers inchi inchikey rinchi --out out
+```
 
-# Import as a Dataset instead (Create Dataset from File)
-python -m inst2ord.cli examples/xmls --out out --format dataset  # or binpb/txtpb
-python -m inst2ord.cli examples/xmls --out out --format binpb --combined
+```bash
+# Export as a Dataset instead (Create Dataset from File in online ORD reaction editor) including information from a maDMP for contributors and proverance information
+python -m inst2ord.cli examples/xmls --madmp examples/madmp/ex9-dmp-long.json --out out --resolve --format dataset  # or binpb/txtpb
+```
 
+```bash
 # Inspect parsing only (neutral intermediate as JSON; no ORD, no network)
 python -m inst2ord.cli examples/xmls --dry-run
 ```
 
 ## Template vs Dataset export
 
-The web app has **two** import paths that take **different, non-interchangeable**
+The [online ORD reaction editor](https://app.open-reaction-database.org/)  has **two** import paths that take **different, non-interchangeable**
 formats. inst2ord can target either (`--format`):
 
 | | **Template** (`--format template`, default) | **Dataset** (`--format dataset` / `binpb` / `txtpb`) |
@@ -107,7 +111,7 @@ formats. inst2ord can target either (`--format`):
 | Import via | **Templates ▸ Import from JSON** (you type the name in the dialog) | **Create Dataset from File** |
 | `--combined` | n/a (templates are single reactions) | writes `out/combined.<ext>` with all runs |
 
-The importers are not interchangeable: the template importer reads
+The formats are not interchangeable: the template importer reads
 `{binpb, variables}` (and requires `variables` to be a JSON **array**); the
 dataset importer parses the whole file as a `Dataset`. Feeding one to the
 other fails.
@@ -115,7 +119,8 @@ other fails.
 ### What information each carries
 
 Both formats contain the same per-reaction content built from the
-instrument files + maDMP:
+instrument files + maDMP, please read more in the 
+[ORD schema documentation](https://docs.open-reaction-database.org/en/latest/schema.html):
 
 - **Reaction inputs** — one component per loaded chemical, with a `NAME`
   identifier and (after `--resolve`) `INCHI`/`INCHI_KEY`/`SMILES`/`CAS`
@@ -143,8 +148,9 @@ straight into the editor's template library.**
 
 ## maDMP usage
 
-When `--madmp` is given, the following attributes are mapped (everything
-else, including the `dataset[]`/distribution/license block, is ignored):
+When `--madmp` is given, the following attributes are mapped from a 
+[RDA-DMP-Common 1.2 JSON](https://github.com/RDA-DMP-Common/RDA-DMP-Common-Standard)
+(everything else, including the `dataset[]`/distribution/license block, is ignored):
 
 - `provenance.experimenter` ← a contributor with a DataCite **experimenter**
   role (`DataCollector`, `ProjectMember`, `Producer`, `Researcher`); else the
