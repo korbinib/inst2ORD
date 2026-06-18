@@ -3,7 +3,7 @@
 Map the XML files produced by a high-throughput chemistry platform (and,
 optionally, a machine-actionable Data Management Plan / maDMP) onto the
 [Open Reaction Database](https://docs.open-reaction-database.org/) (ORD)
-schema, and emit files that can be imported as **templates** into the ORD
+schema, and emit files that can be imported as **templates** or **datasets** into the ORD
 reaction editor.
 
 ## What it does
@@ -83,7 +83,7 @@ formats. inst2ord can target either (`--format`):
 | | **Template** (`--format template`, default) | **Dataset** (`--format dataset` / `binpb` / `txtpb`) |
 | --- | --- | --- |
 | ORD message | a single `Reaction` | a `Dataset` (one reaction per run) |
-| File | `{"binpb": <base64 Reaction>, "variables": []}` | `Dataset` as `.json` / `.binpb` / `.txtpb` |
+| File | `Template` as `.json` | `Dataset` as `.json` / `.binpb` / `.txtpb` |
 | Import via | **Templates ▸ Import from JSON** (you type the name in the dialog) | **Create Dataset from File** |
 | `--combined` | n/a (templates are single reactions) | writes `out/combined.<ext>` with all runs |
 
