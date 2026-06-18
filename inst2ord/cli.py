@@ -30,6 +30,7 @@ from inst2ord.build_ord import (
 )
 from inst2ord.madmp import parse_madmp, validate_madmp
 from inst2ord.resolve import CompoundResolver
+from inst2ord.ror import RorClient, enrich_affiliations
 from inst2ord.validate import validate_dataset, validate_reaction
 
 
@@ -79,6 +80,10 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         madmp = parse_madmp(args.madmp)
         print(f"maDMP: {madmp.title!r} ({madmp.source_path})")
+        if args.resolve:
+            # Look up affiliation cities (provenance.city) from the ROR API;
+            # affiliation names + RORs are mapped regardless of network.
+            enrich_affiliations(madmp, RorClient(cache_dir=args.ror_cache))
 
     resolver = CompoundResolver(
         curation_path=args.curation,
@@ -219,7 +224,8 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--resolve",
         action="store_true",
-        help="resolve names via PubChem (requires network)",
+        help="resolve compound names via PubChem and maDMP affiliation "
+        "cities via the ROR API (requires network)",
     )
     parser.add_argument(
         "--curation",
@@ -230,6 +236,11 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         "--cache",
         default="cache/pubchem",
         help="PubChem response cache directory",
+    )
+    parser.add_argument(
+        "--ror-cache",
+        default="cache/ror",
+        help="ROR API response cache directory",
     )
     parser.add_argument(
         "--combined",

@@ -294,6 +294,15 @@ def _procedure_details(intent: ReactionIntent, madmp: MaDmp | None) -> str:
         for option in selected:
             label = option.description or option.name
             lines.append(f"  - [{option.category}] {label}: {option.value}")
+    if madmp:
+        # Name the experimenter (the person mapped into provenance) with
+        # their affiliation and ROR -- the ROR has no ORD provenance slot,
+        # so the notes are the only place a template can keep it.
+        experimenter_src, _ = _provenance_sources(madmp)
+        note = _experimenter_note(experimenter_src)
+        if note:
+            lines.append("")
+            lines.append(f"Experimenter (from maDMP): {note}")
     if madmp and madmp.contributors:
         # ORD provenance has no contributor list, so keep the full roster
         # here -- this is the only place templates can retain it.
@@ -313,6 +322,9 @@ def _build_provenance(
     experimenter = _to_ord_person(experimenter_src) or _operator_person(intent)
     if experimenter is not None:
         provenance.experimenter.CopyFrom(experimenter)
+    primary = _primary_affiliation(experimenter_src)
+    if primary is not None and primary.city:
+        provenance.city = primary.city
     if madmp and madmp.dmp_id and (madmp.dmp_id_type or "").lower() == "doi":
         provenance.doi = madmp.dmp_id
     created = (madmp.created if madmp else None) or _now_iso()
@@ -393,8 +405,29 @@ def _to_ord_person(source) -> reaction_pb2.Person | None:
         person.email = source.email
     if source.orcid:
         person.orcid = source.orcid
-    if person.name or person.email or person.orcid:
+    primary = _primary_affiliation(source)
+    if primary is not None:
+        person.organization = primary.name
+    if person.name or person.email or person.orcid or person.organization:
         return person
+    return None
+
+
+def _primary_affiliation(source):
+    """The affiliation that speaks for a maDMP person in ORD provenance.
+
+    ORD provenance carries a single ``organization`` and ``city``, so one
+    affiliation must represent the person.  We take the first with a name
+    (the schema requires a name on every affiliation) and source *both*
+    fields from it, so ``provenance.city`` always belongs to the same
+    organisation recorded as ``experimenter.organization`` -- picking the
+    name and city from different affiliations would mismatch them.
+    """
+    if source is None:
+        return None
+    for affiliation in source.affiliations:
+        if isinstance(affiliation.name, str) and affiliation.name:
+            return affiliation
     return None
 
 
@@ -407,7 +440,13 @@ def _operator_person(intent: ReactionIntent) -> reaction_pb2.Person | None:
 
 
 def _contributor_labels(madmp: MaDmp) -> list[str]:
-    """Readable 'Name (Role; ORCID ...)' labels for each named contributor."""
+    """Readable labels for each named contributor.
+
+    Of the form ``Name (Role; ORCID ...; Affiliation, City (ROR ...))`` --
+    role, ORCID and each affiliation (name, resolved city and ROR) are
+    appended only when present, so contributors without an affiliation keep
+    their original ``Name (Role; ORCID ...)`` form.
+    """
     labels = []
     for contributor in madmp.contributors:
         if not contributor.name:
@@ -417,9 +456,40 @@ def _contributor_labels(madmp: MaDmp) -> list[str]:
             bits.append("/".join(contributor.roles))
         if contributor.orcid:
             bits.append(f"ORCID {contributor.orcid}")
+        for affiliation in contributor.affiliations:
+            label = _affiliation_label(affiliation)
+            if label:
+                bits.append(label)
         suffix = f" ({'; '.join(bits)})" if bits else ""
         labels.append(f"{contributor.name}{suffix}")
     return labels
+
+
+def _experimenter_note(source) -> str:
+    """One-line 'Name; Affiliation, City (ROR ...)' for the experimenter."""
+    if source is None:
+        return ""
+    bits = [source.name] if isinstance(source.name, str) and source.name else []
+    for affiliation in source.affiliations:
+        label = _affiliation_label(affiliation)
+        if label:
+            bits.append(label)
+    return "; ".join(bits)
+
+
+def _affiliation_label(affiliation) -> str:
+    """'Name, City (ROR https://ror.org/..)' from the parts that are set.
+
+    Only string parts are joined, so a malformed (non-string) affiliation
+    name from the maDMP is dropped rather than crashing the join.
+    """
+    parts = [part for part in (affiliation.name, affiliation.city)
+             if isinstance(part, str) and part]
+    text = ", ".join(parts)
+    if affiliation.ror:
+        ror = f"ROR {affiliation.ror}"
+        text = f"{text} ({ror})" if text else ror
+    return text
 
 
 # --- dataset metadata ------------------------------------------------------

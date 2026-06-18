@@ -55,6 +55,51 @@ def test_orcid_url_prefix_stripped(tmp_path):
     assert madmp.contact.identifier == "https://orcid.org/0000-0001-2345-6789"
 
 
+def test_affiliation_with_ror_parsed(tmp_path):
+    doc = {"dmp": {"contributor": [{
+        "name": "Ada", "role": "Researcher",
+        "contributor_id": {"identifier": "0000-1", "type": "orcid"},
+        "affiliation": [{
+            "name": "TU Wien",
+            "affiliation_id": {
+                "identifier": "https://ror.org/04d836q62", "type": "ror"},
+        }],
+    }]}}
+    aff = parse_madmp(_write(tmp_path, doc)).contributors[0].affiliations[0]
+    assert aff.name == "TU Wien"
+    assert aff.ror == "https://ror.org/04d836q62"   # canonical URL
+    assert aff.identifier_type == "ror"
+    assert aff.city is None                          # not resolved at parse
+
+
+def test_affiliation_non_ror_id_has_no_ror(tmp_path):
+    doc = {"dmp": {"contact": {
+        "name": "Bo", "contact_id": {"identifier": "x", "type": "orcid"},
+        "affiliation": {  # a lone object (not an array) is tolerated
+            "name": "Some Lab",
+            "affiliation_id": {"identifier": "0000 0001", "type": "isni"},
+        },
+    }}}
+    aff = parse_madmp(_write(tmp_path, doc)).contact.affiliations[0]
+    assert aff.name == "Some Lab"
+    assert aff.ror is None                # only 'ror' type yields a ROR
+    assert aff.identifier == "0000 0001"
+
+
+def test_affiliation_non_string_id_type_is_tolerated(tmp_path):
+    # A non-string affiliation_id.type must not crash the parse (the module
+    # promises unexpectedly typed values yield None/empty, not an error).
+    doc = {"dmp": {"contributor": [{
+        "name": "Ada", "role": "Researcher",
+        "contributor_id": {"identifier": "0000-1", "type": "orcid"},
+        "affiliation": [{
+            "name": "X", "affiliation_id": {"identifier": "y", "type": 5}}],
+    }]}}
+    aff = parse_madmp(_write(tmp_path, doc)).contributors[0].affiliations[0]
+    assert aff.ror is None
+    assert aff.name == "X"
+
+
 def test_null_dmp_wrapper(tmp_path):
     madmp = parse_madmp(_write(tmp_path, {"dmp": None}))
     assert madmp.title is None

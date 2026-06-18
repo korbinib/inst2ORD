@@ -110,10 +110,12 @@ instrument files + maDMP, please read more in the
 - **Conditions** — qualitative `temperature`/`stirring` inferred from deck
   station names (`Heat-Stir` → heated + stir bar, `Vortex` → agitation),
   flagged low-confidence in `conditions.details`; no setpoints/rpm invented.
-- **Provenance** — `experimenter` and `record_created` (person + time +
-  DOI) from the maDMP (see below).
+- **Provenance** — `experimenter` (with their affiliation as
+  `organization`) and `record_created` (person + time + DOI) from the
+  maDMP; `city` from the experimenter's affiliation ROR (see below).
 - **Notes** — a free-text dump of labware, run/setup options, source files,
-  and the full maDMP contributor roster (roles + ORCID).
+  the experimenter, and the full maDMP contributor roster (roles, ORCID,
+  affiliation + ROR).
 
 The **Dataset** format additionally carries **Dataset-level maDMP
 metadata** that a single-reaction template has nowhere to put: `Dataset.name`
@@ -136,12 +138,19 @@ When `--madmp` is given, the following attributes are mapped from a
   `ProjectLeader`, `WorkPackageLeader`); else the `contact`; else the
   experimenter. So up to **two** distinct people are represented (ORD
   provenance has no contributor list).
+- the experimenter's first `affiliation` `name` → `provenance.experimenter.organization`.
+- `provenance.city` ← the experimenter's affiliation **city**, looked up
+  from the ROR API (`locations[].geonames_details.name`) when the
+  affiliation has a `ror` id and `--resolve` is given. The lookup is cached
+  (`--ror-cache`, default `cache/ror`); affiliation names and RORs are
+  mapped with or without network, only the city needs it.
 - `dmp_id` (when `type == "doi"`) → `provenance.doi`; `created` →
   `record_created.time`.
 - `title` → `Dataset.name`; `description` + `project` + `funding` +
   contributor names → `Dataset.description` (Dataset formats only).
-- the full contributor roster (roles + ORCID) is preserved in the reaction
-  notes regardless of format.
+- the full contributor roster (roles, ORCID, affiliation name + city +
+  ROR) and the named experimenter are preserved in the reaction notes
+  regardless of format.
 
 The maDMP is validated against the bundled **RDA-DMP-Common 1.2 JSON
 schema** before use: issues are printed as warnings and processing

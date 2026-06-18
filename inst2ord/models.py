@@ -100,6 +100,22 @@ class ReactionIntent:
 # --- maDMP (RDA-DMP-Common 1.2) -------------------------------------------
 
 @dataclass
+class Affiliation:
+    """An organisation a maDMP person is affiliated with.
+
+    ``ror`` is the canonical ``https://ror.org/<id>`` URL when the
+    ``affiliation_id`` is of type ``ror``; ``city`` is filled later from the
+    ROR API (see :mod:`inst2ord.ror`) and left ``None`` when not resolved.
+    """
+
+    name: str | None = None
+    identifier: str | None = None
+    identifier_type: str | None = None
+    ror: str | None = None
+    city: str | None = None
+
+
+@dataclass
 class Person:
     name: str | None = None
     email: str | None = None
@@ -107,6 +123,7 @@ class Person:
     identifier: str | None = None
     identifier_type: str | None = None
     roles: list[str] = field(default_factory=list)
+    affiliations: list[Affiliation] = field(default_factory=list)
 
 
 @dataclass

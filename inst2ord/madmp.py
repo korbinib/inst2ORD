@@ -11,7 +11,13 @@ from __future__ import annotations
 import json
 import os
 
-from inst2ord.models import Funding, MaDmp, MaDmpProject, Person
+from inst2ord.models import (
+    Affiliation,
+    Funding,
+    MaDmp,
+    MaDmpProject,
+    Person,
+)
 
 # Bundled RDA-DMP-Common 1.2 JSON schema (public domain / Unlicense).
 SCHEMA_PATH = os.path.join(
@@ -99,7 +105,39 @@ def _person(entry: dict, id_key: str) -> Person:
         identifier=id_value,
         identifier_type=id_type,
         roles=_roles(entry.get("role")),
+        affiliations=_affiliations(entry.get("affiliation")),
     )
+
+
+def _affiliations(raw) -> list[Affiliation]:
+    """Parse a person's ``affiliation`` (an array, or a lone object).
+
+    Each affiliation carries a ``name`` and an ``affiliation_id``; when the
+    id is of type ``ror`` its canonical URL is stored on :attr:`ror` for the
+    ROR city lookup and the notes.
+    """
+    if isinstance(raw, dict):
+        raw = [raw]
+    if not isinstance(raw, list):
+        return []
+    result = []
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        identifier = entry.get("affiliation_id")
+        identifier = identifier if isinstance(identifier, dict) else {}
+        id_value = identifier.get("identifier") or None
+        id_type = identifier.get("type")
+        is_ror = isinstance(id_type, str) and id_type.lower() == "ror"
+        result.append(
+            Affiliation(
+                name=entry.get("name"),
+                identifier=id_value,
+                identifier_type=id_type,
+                ror=_clean_ror(id_value) if is_ror else None,
+            )
+        )
+    return result
 
 
 def _roles(role) -> list[str]:
@@ -143,6 +181,34 @@ def _clean_orcid(value) -> str | None:
     if lowered.startswith("orcid.org/"):
         bare = bare[len("orcid.org/"):]
     return bare.strip("/") or None
+
+
+def _clean_ror(value) -> str | None:
+    """Return a canonical ``https://ror.org/<id>`` URL, or ``None``.
+
+    A maDMP ``affiliation_id`` of type ``ror`` may be the bare id
+    (``03yrm5c26``) or the resolvable URL.  We normalise to the canonical
+    URL form, which is both the display form for the notes and trivially
+    reducible to the bare id the ROR API expects (see :mod:`inst2ord.ror`).
+    """
+    if not isinstance(value, str):
+        return None
+    bare = value.strip()
+    if not bare:
+        return None
+    lowered = bare.lower()
+    for scheme in ("https://", "http://"):
+        if lowered.startswith(scheme):
+            bare = bare[len(scheme):]
+            lowered = bare.lower()
+            break
+    if lowered.startswith("www."):
+        bare = bare[4:]
+        lowered = bare.lower()
+    if lowered.startswith("ror.org/"):
+        bare = bare[len("ror.org/"):]
+    bare = bare.strip("/")
+    return f"https://ror.org/{bare}" if bare else None
 
 
 def _project(entry: dict) -> MaDmpProject:

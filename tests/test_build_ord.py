@@ -5,6 +5,7 @@ from ord_schema.proto import reaction_pb2
 
 from inst2ord.build_ord import build_dataset, build_reaction
 from inst2ord.models import (
+    Affiliation,
     InputComponent,
     Labware,
     MaDmp,
@@ -192,6 +193,67 @@ def test_contributor_roster_kept_in_notes():
     notes = build_reaction(_intent(), madmp).notes.procedure_details
     assert "Contributors (from maDMP):" in notes
     assert "Bob (DataCurator; ORCID 0000-1)" in notes
+
+
+def test_experimenter_affiliation_and_ror_city():
+    aff = Affiliation(
+        name="TU Wien", ror="https://ror.org/04d836q62", city="Vienna"
+    )
+    madmp = MaDmp(contributors=[
+        Person(name="Rex", roles=["Researcher"], affiliations=[aff]),
+    ])
+    rxn = build_reaction(_intent(), madmp)
+    # Affiliation name -> Person.organization; resolved city -> provenance.
+    assert rxn.provenance.experimenter.name == "Rex"
+    assert rxn.provenance.experimenter.organization == "TU Wien"
+    assert rxn.provenance.city == "Vienna"
+    # The ROR (no ORD provenance slot) is preserved in the notes.
+    notes = rxn.notes.procedure_details
+    assert "Experimenter (from maDMP): Rex; TU Wien, Vienna " \
+        "(ROR https://ror.org/04d836q62)" in notes
+
+
+def test_city_omitted_when_affiliation_unresolved():
+    # Name + ROR are mapped without network; city stays blank until resolved.
+    aff = Affiliation(name="TU Wien", ror="https://ror.org/04d836q62")
+    madmp = MaDmp(contact=Person(name="Bo", affiliations=[aff]))
+    rxn = build_reaction(_intent(), madmp)
+    assert rxn.provenance.experimenter.organization == "TU Wien"
+    assert rxn.provenance.city == ""  # unset
+    assert "ROR https://ror.org/04d836q62" in rxn.notes.procedure_details
+
+
+def test_city_and_organization_come_from_same_affiliation():
+    # The primary (first named) affiliation has no ROR/city; a *second* one
+    # does. city must not borrow the second's city onto the first's org.
+    rex = Person(name="Rex", roles=["Researcher"], affiliations=[
+        Affiliation(name="Uni A"),  # primary, no city
+        Affiliation(name="Uni B", ror="https://ror.org/bbb", city="Vienna"),
+    ])
+    rxn = build_reaction(_intent(), MaDmp(contributors=[rex]))
+    assert rxn.provenance.experimenter.organization == "Uni A"
+    assert rxn.provenance.city == ""  # Uni B's city is not attributed to Uni A
+
+
+def test_malformed_affiliation_name_does_not_crash_build():
+    # A non-string affiliation name (malformed maDMP) is tolerated, not joined.
+    rex = Person(name="Rex", roles=["Researcher"],
+                 affiliations=[Affiliation(name=123, ror="https://ror.org/x")])
+    rxn = build_reaction(_intent(), MaDmp(contributors=[rex]))
+    assert "ROR https://ror.org/x" in rxn.notes.procedure_details
+
+
+def test_all_contributor_affiliations_in_notes():
+    madmp = MaDmp(contributors=[
+        Person(name="Rex", roles=["Researcher"],
+               affiliations=[Affiliation(name="Uni A", city="Bergen",
+                                         ror="https://ror.org/aaa")]),
+        Person(name="Dana", roles=["DataManager"],
+               affiliations=[Affiliation(name="Uni B")]),
+    ])
+    notes = build_reaction(_intent(), madmp).notes.procedure_details
+    assert "Rex (Researcher; Uni A, Bergen (ROR https://ror.org/aaa))" in notes
+    assert "Dana (DataManager; Uni B)" in notes
 
 
 def test_experimenter_falls_back_to_contributor_then_operator():
