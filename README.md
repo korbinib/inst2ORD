@@ -225,4 +225,42 @@ directory (`detect_adapter`). **Planned:** when a maDMP is supplied, its
 `dataset[].technical_resource` entries could pick the adapter automatically
 by matching the resource name/description against each adapter.
 
+### Planned: downstream analysis data (NMR / HPLC) → outcomes & products
+
+The platform XML only describes the *setup* side, so inst2ord deliberately
+leaves the outcome side of every reaction blank (see *What it does*). A
+natural extension is a second, **downstream** input stream — the analytical
+files a separate instrument produces *after* the reaction (e.g. an NMR or
+HPLC/LC-MS run) — used to populate `Reaction.outcomes[]` and so close the
+loop from loaded reagents to identified, quantified products.
+
+Mapping target in the [ORD schema](https://docs.open-reaction-database.org/en/latest/schema.html):
+
+- **`ReactionOutcome.products[]`** (`ProductCompound`) — one per detected
+  product, carrying the same `NAME`/`INCHI`/`INCHI_KEY`/`SMILES` identifiers
+  as inputs (reusing the resolver), with `is_desired_product` and
+  `reaction_role = PRODUCT`.
+- **Yield** → `ProductCompound.measurements[]` (`ProductMeasurement`) with
+  `type = YIELD` and `percentage`; related quantities map to `AREA`/`COUNTS`
+  (HPLC integration), `PURITY` or `IDENTITY`. Flags such as
+  `uses_internal_standard` / `is_normalized` / `uses_authentic_standard`
+  record *how* the yield was determined.
+- **`ReactionOutcome.analyses`** — one `Analysis` per technique
+  (`type = NMR_1H` / `NMR_13C` / `LC` / `LCMS` / `HRMS` …), referenced from
+  each measurement via `ProductMeasurement.analysis_key`, so a yield is
+  traceable to the run that produced it.
+- **`ReactionOutcome.conversion`** and **`reaction_time`** where the
+  analysis reports them.
+
+Architecturally this fits the existing exchangeable-adapter design: an
+**analysis adapter** would parse the instrument's native export into an
+outcome counterpart of `ReactionIntent` (a new `outcomes` block on the
+model), `build_ord` would emit the ORD messages above, and the resolver is
+reused to identify products. The open question is **correlation** — matching
+each analysis file back to its reaction run (by run id, well/position, or
+sample label) so outcomes attach to the right `Reaction`; the maDMP
+`dataset[].technical_resource` entries (see above) could also flag which
+runs carry downstream analysis. Adding outcomes would also let these
+reactions pass full ORD validation rather than reporting the *expected gaps*
+noted under *Validation*.
 
