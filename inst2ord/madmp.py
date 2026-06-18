@@ -95,7 +95,7 @@ def _person(entry: dict, id_key: str) -> Person:
     return Person(
         name=entry.get("name"),
         email=_clean_email(entry.get("mbox")),
-        orcid=id_value if id_type == "orcid" else None,
+        orcid=_clean_orcid(id_value) if id_type == "orcid" else None,
         identifier=id_value,
         identifier_type=id_type,
         roles=_roles(entry.get("role")),
@@ -116,6 +116,33 @@ def _clean_email(mbox) -> str | None:
     if not isinstance(mbox, str) or not mbox:
         return None
     return mbox[7:] if mbox.lower().startswith("mailto:") else mbox
+
+
+def _clean_orcid(value) -> str | None:
+    """Return a bare ORCID identifier, stripping any ``orcid.org`` URL prefix.
+
+    maDMPs express an ORCID either as the bare ``0000-0001-2345-6789`` or as
+    the resolvable URL ``https://orcid.org/0000-0001-2345-6789``.  ORD's
+    ``Person.orcid`` expects the bare identifier, so strip the scheme,
+    optional ``www.`` and the ``orcid.org/`` host before returning it.
+    """
+    if not isinstance(value, str):
+        return None
+    bare = value.strip()
+    if not bare:
+        return None
+    lowered = bare.lower()
+    for scheme in ("https://", "http://"):
+        if lowered.startswith(scheme):
+            bare = bare[len(scheme):]
+            lowered = bare.lower()
+            break
+    if lowered.startswith("www."):
+        bare = bare[4:]
+        lowered = bare.lower()
+    if lowered.startswith("orcid.org/"):
+        bare = bare[len("orcid.org/"):]
+    return bare.strip("/") or None
 
 
 def _project(entry: dict) -> MaDmpProject:

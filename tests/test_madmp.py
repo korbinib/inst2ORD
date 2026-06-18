@@ -43,6 +43,18 @@ def test_role_as_string_and_mailto_prefix(tmp_path):
     assert person.orcid == "0000-0001-2345-6789"
 
 
+def test_orcid_url_prefix_stripped(tmp_path):
+    doc = {"dmp": {"contact": {
+        "name": "John Smith", "mbox": "john@example.org",
+        "contact_id": {"identifier": "https://orcid.org/0000-0001-2345-6789",
+                       "type": "orcid"},
+    }}}
+    madmp = parse_madmp(_write(tmp_path, doc))
+    # orcid is the bare identifier; the raw URL is kept on .identifier.
+    assert madmp.contact.orcid == "0000-0001-2345-6789"
+    assert madmp.contact.identifier == "https://orcid.org/0000-0001-2345-6789"
+
+
 def test_null_dmp_wrapper(tmp_path):
     madmp = parse_madmp(_write(tmp_path, {"dmp": None}))
     assert madmp.title is None
