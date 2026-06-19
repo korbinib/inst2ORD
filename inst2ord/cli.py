@@ -76,9 +76,12 @@ def main(argv: list[str] | None = None) -> int:
 
     madmp = None
     if args.madmp:
-        if _check_madmp_schema(args.madmp, args.strict_madmp) is False:
+        madmp_path = _resolve_madmp_path(args.madmp)
+        if madmp_path is None:
             return 2
-        madmp = parse_madmp(args.madmp)
+        if _check_madmp_schema(madmp_path, args.strict_madmp) is False:
+            return 2
+        madmp = parse_madmp(madmp_path)
         print(f"maDMP: {madmp.title!r} ({madmp.source_path})")
         if args.resolve:
             # Look up affiliation cities (provenance.city) from the ROR API;
@@ -120,6 +123,42 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"\nWrote {args.format} output to {args.out}/")
     return 0 if overall_ok else 1
+
+
+def _resolve_madmp_path(path: str) -> str | None:
+    """Resolve a ``--madmp`` argument to a single maDMP JSON file.
+
+    Accepts the file directly, or -- for convenience, since the bundled
+    examples keep the maDMP in its own ``madmp/`` folder -- a directory that
+    holds exactly one ``*.json`` file.  Returns ``None`` (after printing why)
+    for a missing path or a directory with no or several JSON files, so the
+    caller can exit cleanly instead of crashing on ``open()``.
+    """
+    if os.path.isfile(path):
+        return path
+    if os.path.isdir(path):
+        candidates = sorted(
+            entry.path
+            for entry in os.scandir(path)
+            if entry.is_file() and entry.name.lower().endswith(".json")
+        )
+        if len(candidates) == 1:
+            return candidates[0]
+        if not candidates:
+            print(
+                f"No maDMP JSON file found in directory {path!r}.",
+                file=sys.stderr,
+            )
+        else:
+            names = ", ".join(os.path.basename(c) for c in candidates)
+            print(
+                f"Multiple JSON files in {path!r} ({names}); "
+                "point --madmp at one file.",
+                file=sys.stderr,
+            )
+        return None
+    print(f"maDMP path not found: {path!r}", file=sys.stderr)
+    return None
 
 
 def _check_madmp_schema(path: str, strict: bool) -> bool:
@@ -192,7 +231,10 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         "--instrument",
         help="instrument adapter name (default: auto-detect)",
     )
-    parser.add_argument("--madmp", help="path to a maDMP JSON file")
+    parser.add_argument(
+        "--madmp",
+        help="path to a maDMP JSON file (or a directory holding exactly one)",
+    )
     parser.add_argument(
         "--strict-madmp",
         action="store_true",
